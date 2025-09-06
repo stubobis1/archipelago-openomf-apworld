@@ -18,8 +18,8 @@ MAX_LINK_UPGRADES       = 22
 MAX_SKILL_GEMS          = 50 # you will get more, but this is the max required for "logic"
 MAX_SUPPORT_GEMS        = 50 # you will get more, but this is the max required for "logic"
 
-_debug = True
-_very_debug = True
+_debug = False
+_very_debug = False
 if Items.ACT_0_USABLE_GEMS + Items.ACT_0_WEAPON_TYPES + Items.ACT_0_ARMOUR_TYPES + Items.ACT_0_FLASK_SLOTS > 19:
     raise Exception("Act 0 requirements are too high, there are not enough locations in early act 1 to satisfy them")
 
