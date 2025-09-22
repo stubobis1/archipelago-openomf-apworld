@@ -199,7 +199,7 @@ def can_reach(act: int, world , state: CollectionState) -> bool:
 
 
 
-def SelectLocationsToAdd (world: "PathOfExileWorld", target_amount):
+def SelectLocationsToAdd (world: "PathOfExileWorld", target_amount) -> list[LocationDict]:
     opt:PathOfExileOptions = world.options
 
     total_available_locations: list[LocationDict] = list()
