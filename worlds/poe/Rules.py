@@ -218,17 +218,20 @@ def SelectLocationsToAdd (world: "PathOfExileWorld", target_amount) -> list[Loca
         lvl_locs = [loc for loc in level_locations.values() if loc["level"] is not None and loc["level"] <= max_level]
         total_available_locations.extend(lvl_locs)
 
-    def total_needed_by_act(act: int) -> int:
-        if act < 1:
+    def total_needed_by_act(act_target: int) -> int:
+        if act_target < 1:
             return 0
         needed_locations = 0
         needed_locations += Items.ACT_0_USABLE_GEMS + Items.ACT_0_WEAPON_TYPES + Items.ACT_0_ARMOUR_TYPES + Items.ACT_0_FLASK_SLOTS + Items.ACT_0_ADDITIONAL_LOCATIONS
-        needed_locations += get_ascendancy_amount_for_act(act, world)
-        needed_locations += get_gear_amount_for_act(act, world)
-        needed_locations += get_flask_amount_for_act(act, world)
-        needed_locations += get_gem_link_amount_for_act(act, world)
-        needed_locations += get_skill_gem_amount_for_act(act, world)
-        needed_locations += get_passives_amount_for_act(act, world)
+        if act_target >= 1:
+            needed_locations += 5 # padding
+
+        needed_locations += get_ascendancy_amount_for_act(act_target, world)
+        needed_locations += get_gear_amount_for_act(act_target, world)
+        needed_locations += get_flask_amount_for_act(act_target, world)
+        needed_locations += get_gem_link_amount_for_act(act_target, world)
+        needed_locations += get_skill_gem_amount_for_act(act_target, world)
+        needed_locations += get_passives_amount_for_act(act_target, world)
         return needed_locations
 
 

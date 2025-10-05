@@ -189,9 +189,27 @@ def cull_items_to_place(world: "PathOfExileWorld", items: Dict[int, ItemDict], l
 
     # Final verification
     final_count = sum(item.get("count", 1) for item in items.values())
-    if final_count != total_locations_count:
-        logger.warning(f"Final item count ({final_count}) doesn't match location count ({total_locations_count})")
-
+    if final_count > total_locations_count:
+        logger.error(f"\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+                     f"\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+                     f"\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+                     f"\n"
+                     f"\nGENERATION ERROR! with player ({world.player_name})"
+                     f"\nFinal item count ({final_count}) doesn't match location count ({total_locations_count})"
+                     f"\nWill precollect random items to make up the difference."
+                     f"\n"
+                     f"\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+                     f"\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+                     f"\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n")
+        while final_count > total_locations_count:
+            # Precollect random items to fill the gap
+            random_item = world.random.choice(list(items.values()))
+            logger.debug(f"Precollecting item: {random_item['name']}")
+            random_item["count"] = random_item.get("count", 1) - 1
+            if random_item["count"] <= 0:
+                items.pop(random_item["id"])
+            final_count -= 1
+        
     return items
 
 
