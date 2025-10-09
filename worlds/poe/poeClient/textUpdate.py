@@ -74,7 +74,7 @@ async def chat_commands_callback(ctx: "PathOfExileContext", line: str):
     char_name, message = get_char_name_and_message_from_line(line)
     message = message.lower()
 
-    if "!ap char" in message:
+    if any(cmd in message for cmd in ("!ap char", "!ap character", "!ap setchar", "!ap setcharacter", "!ap_char")):
         _random_string = random.randbytes(8).hex()
         await inputHelper.send_poe_text(f"char_{_random_string}") # don't know the char name yet, so we can't whisper.
     if "char_" in message:
@@ -90,7 +90,7 @@ async def chat_commands_callback(ctx: "PathOfExileContext", line: str):
 
     if not char_name == ctx.character_name:
         return
-    item_ids = [item.item for item in ctx.items_received]
+    received_item_ids = [item.item for item in ctx.items_received]
     
     if "!help" in message or "!commands" in message:
             help_message = """!ap char - Set your character | !deathlink | !goal | !passive or !p | !usable skill gems - by level | !usable support gems | !usable utility gems | !usable gems | !main gems | !support gems | !utility gems | !all gems or !gems | !gear | !weapons | !armor | !links | !flasks | !ascendancy | !help | Note: use @yourname followed a command."""
@@ -98,67 +98,67 @@ async def chat_commands_callback(ctx: "PathOfExileContext", line: str):
             
     if "!main gems" in message:
         # Get all main skill gem items in item_ids
-        gems = [item for item in Items.get_main_skill_gem_items() if item["id"] in item_ids] + [i for i in Items.get_by_category("GemModifier") if i["id"] in item_ids]
+        gems = [item for item in Items.get_main_skill_gem_items() if item["id"] in received_item_ids] + [i for i in Items.get_by_category("GemModifier") if i["id"] in received_item_ids]
         # sort by required level
         gems.sort(key=lambda x: x.get("requiredLevel", 0))  # Sort by required level
         await split_send_message(ctx,', '.join(gem['name'] for gem in gems))
 
     if "!support gems" in message:
         # Get all support gem items in item_ids
-        gems = [item for item in Items.get_support_gem_items() if item["id"] in item_ids]
+        gems = [item for item in Items.get_support_gem_items() if item["id"] in received_item_ids]
         gems.sort(key=lambda x: x.get("requiredLevel", 0))  # Sort by required level
         await split_send_message(ctx,', '.join(gem['name'] for gem in gems))
 
     if "!utility gems" in message:
         # Get all utility gem items in item_ids
-        gems = [item for item in Items.get_utility_skill_gem_items() if item["id"] in item_ids]
+        gems = [item for item in Items.get_utility_skill_gem_items() if item["id"] in received_item_ids]
         gems.sort(key=lambda x: x.get("requiredLevel", 0))  # Sort by required level
         await split_send_message(ctx,', '.join(gem['name'] for gem in gems))
         
     if "!all gems" in message or "!gems" in message:
         # Get all gem items in item_ids
-        gems = [item for item in Items.get_all_gems() if item["id"] in item_ids] + [i for i in Items.get_by_category("GemModifier") if i["id"] in item_ids]
+        gems = [item for item in Items.get_all_gems() if item["id"] in received_item_ids] + [i for i in Items.get_by_category("GemModifier") if i["id"] in received_item_ids]
         gems.sort(key=lambda x: x.get("requiredLevel", 0))  # Sort by required level
         await split_send_message(ctx,', '.join(gem['name'] for gem in gems))
 
     if "!usable skill gems" in message:
         # Get all usable skill gems in item_ids
-        usable_gems = [item for item in Items.get_main_skill_gems_by_required_level(0, ctx.last_character_level) if item["id"] in item_ids]
+        usable_gems = [item for item in Items.get_main_skill_gems_by_required_level(0, ctx.last_character_level) if item["id"] in received_item_ids]
         usable_gems.sort(key=lambda x: x.get("requiredLevel", 0), reverse=True)  # Sort by required level descending
         await split_send_message(ctx,', '.join(gem['name'] for gem in usable_gems))
 
     if "!usable support gems" in message:
         # Get all usable skill gems in item_ids
-        usable_gems = [item for item in Items.get_support_gems_by_required_level(0, ctx.last_character_level) if item["id"] in item_ids]
+        usable_gems = [item for item in Items.get_support_gems_by_required_level(0, ctx.last_character_level) if item["id"] in received_item_ids]
         usable_gems.sort(key=lambda x: x.get("requiredLevel", 0), reverse=True)  # Sort by required level descending
         await split_send_message(ctx,', '.join(gem['name'] for gem in usable_gems))
 
     if "!usable utility gems" in message:
         # Get all usable utility gems in item_ids
-        usable_gems = [item for item in Items.get_utility_skill_gems_by_required_level(0, ctx.last_character_level) if item["id"] in item_ids]
+        usable_gems = [item for item in Items.get_utility_skill_gems_by_required_level(0, ctx.last_character_level) if item["id"] in received_item_ids]
         usable_gems.sort(key=lambda x: x.get("requiredLevel", 0), reverse=True)  # Sort by required level descending
         await split_send_message(ctx,', '.join(gem['name'] for gem in usable_gems))
 
     if "!usable gems" in message:
         # Get all usable gems in item_ids
-        usable_gems = [item for item in Items.get_all_gems_by_required_level(0, ctx.last_character_level) if item["id"] in item_ids]
+        usable_gems = [item for item in Items.get_all_gems_by_required_level(0, ctx.last_character_level) if item["id"] in received_item_ids]
         usable_gems.sort(key=lambda x: x.get("requiredLevel", 0), reverse=True)  # Sort by required level descending
         await split_send_message(ctx,', '.join(gem['name'] for gem in usable_gems))
 
     if "!gear" in message:
         # Get all gear items in item_ids
-        gear = [item for item in Items.get_gear_items() if item["id"] in item_ids]
+        gear = [id for id in received_item_ids if id in Items.get_gear_items().values().id]
         progressive_message = build_progressive_message(gear)
         singles = ', '.join(gear['name'] for gear in gear if "Progressive" not in gear["category"])
         await split_send_message(ctx, progressive_message + (', and ' + singles if singles else '' ))
 
     if "!links" in message:
         # Get all linked items in item_ids
-        links = [item for item in Items.get_max_links_items() if item["id"] in item_ids]
+        links = [item for item in Items.get_max_links_items() if item["id"] in received_item_ids]
         link_counts: dict[str, int] = {}
         
         # Count each occurrence of each link item
-        for item_id in item_ids:
+        for item_id in received_item_ids:
             # Find the link item with this ID
             link_item = next((item for item in Items.get_max_links_items() if item["id"] == item_id), None)
             if link_item:
@@ -176,7 +176,7 @@ async def chat_commands_callback(ctx: "PathOfExileContext", line: str):
         flask_counts: dict[str, int] = {}
         
         # Count each occurrence of each flask item
-        for item_id in item_ids:
+        for item_id in received_item_ids:
             # Find the flask item with this ID
             flask_item = next((item for item in Items.get_flask_items() if item["id"] == item_id), None)
             if flask_item:
@@ -192,19 +192,19 @@ async def chat_commands_callback(ctx: "PathOfExileContext", line: str):
 
     if "!ascendancy" in message:
         # Get all ascendancy items in item_ids
-        ascendancy = [item for item in Items.get_ascendancy_items() if item["id"] in item_ids]
+        ascendancy = [item for item in Items.get_ascendancy_items() if item["id"] in received_item_ids]
         await split_send_message(ctx,', '.join(ascendancy['name'] for ascendancy in ascendancy))
 
     if "!weapons" in message:
         # Get all weapon items in item_ids
-        weapons = [item for item in Items.get_weapon_items() if item["id"] in item_ids]
+        weapons = [item for item in Items.get_weapon_items() if item["id"] in received_item_ids]
         progressive_message = build_progressive_message(weapons)
         singles = ', '.join(weapons['name'] for weapons in weapons if "Progressive" not in weapons["category"])
         await split_send_message(ctx, progressive_message + (', and ' + singles if singles else '' ))
 
     if "!armor" in message:
         # Get all armor items in item_ids
-        armor = [item for item in Items.get_armor_items() if item["id"] in item_ids]
+        armor = [item for item in Items.get_armor_items() if item["id"] in received_item_ids]
         progressive_message = build_progressive_message(armor)
         singles = ', '.join(armor['name'] for armor in armor if "Progressive" not in armor["category"])
         await split_send_message(ctx, progressive_message + (', and ' + singles if singles else '' ))
