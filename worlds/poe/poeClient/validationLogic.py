@@ -258,7 +258,11 @@ def validate_char_equipment(character: gggAPI.Character, ctx: "PathOfExileContex
         errors.append(f"Class {character.class_}")
 
     gucci_rarity_check = {}
+    ignore_item_inventory_ids = ["BrequelGrafts","BrequelGrafts2"]
     for equipped_item in character.equipment:
+        if equipped_item.inventoryId in ignore_item_inventory_ids:
+            continue # ignore brequel grafts.
+
         rarity = equipped_item.rarity
         gucci_rarity_check.setdefault(rarity, 0)
         gucci_rarity_check[rarity] += 1
