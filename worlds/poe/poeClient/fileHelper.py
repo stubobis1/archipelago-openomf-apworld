@@ -319,7 +319,7 @@ async def load_settings(ctx: "PathOfExileContext", path: Path = settings_file_pa
             "loot_filter_display": world_settings.get("loot_filter_display", default_settings.get("loot_filter_display")),
             "client_txt": world_settings.get("client_txt",
                                              default_settings.get("client_txt", find_possible_client_txt_path())),
-            "last_char": world_settings.get("last_char", default_settings.get("last_char")),
+            "last_char": world_settings.get("last_char", None),
             "base_item_filter": world_settings.get("base_item_filter", default_settings.get("base_item_filter")),
             "whisper_updates": world_settings.get("whisper_updates", default_settings.get("whisper_updates", None)),
             # List of item IDs already received for whisper updates. Not saved to defaults, nor loaded from defaults.
