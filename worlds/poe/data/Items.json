@@ -211,7 +211,7 @@
 {"category":["MainSkillGem"],"reqLevel":12,"classification":1,"name":"Venom Gyre","reqToUse":["Claw","Dagger"],"id":198},
 {"category":["MainSkillGem"],"reqLevel": 1,"classification":1,"name":"Viper Strike","reqToUse":["Claw","Dagger","Sword"],"id":199},
 {"category":["MainSkillGem"],"reqLevel":12,"classification":1,"name":"Volatile Dead","id":200},
-{"category":["MainSkillGem", "EarlyMovement"],"reqLevel":10,"classification":1,"name":"Whirling Blades","reqToUse":["Weapon"],"id":201},
+{"category":["MainSkillGem", "EarlyMovement"],"reqLevel":10,"classification":1,"name":"Whirling Blades","reqToUse":["Claw","Dagger","Sword"],"id":201},
 {"category":["MainSkillGem"],"reqLevel":28,"classification":1,"name":"Wild Strike","reqToUse":["Claw","Dagger","Sword","Axe","Mace","Staff","Sceptre"],"id":202},
 {"category":["MainSkillGem"],"reqLevel":12,"classification":1,"name":"Arc","id":203},
 {"category":["MainSkillGem"],"reqLevel":38,"classification":1,"name":"Arcanist Brand","id":204},
@@ -293,7 +293,7 @@
 {"category":["MainSkillGem"],"reqLevel":28,"classification":1,"name":"Bladestorm","reqToUse":["Sword","Axe"],"id":280},
 {"category":["MainSkillGem"],"reqLevel":28,"classification":1,"name":"Boneshatter","reqToUse":["Axe","Mace","Staff","Sceptre"],"id":281},
 {"category":["MainSkillGem"],"reqLevel":12,"classification":2,"name":"Chain Hook","reqToUse":["Sword","Axe","Mace","Sceptre"],"id":282},
-{"category":["MainSkillGem"],"reqLevel": 1,"classification":1,"name":"Cleave","reqToUse":["Weapon"],"id":283},
+{"category":["MainSkillGem"],"reqLevel": 1,"classification":1,"name":"Cleave","reqToUse":["Axe","Sword"],"id":283},
 {"category":["MainSkillGem"],"reqLevel":28,"classification":2,"name":"Consecrated Path","reqToUse":["Sword","Axe","Mace","Staff","Sceptre","Unarmed"],"id":284},
 {"category":["MainSkillGem"],"reqLevel":28,"classification":1,"name":"Dominating Blow","reqToUse":["Claw","Dagger","Sword","Axe","Mace","Staff","Sceptre","Unarmed"],"id":285},
 {"category":["MainSkillGem"],"reqLevel":28,"classification":1,"name":"Earthquake","reqToUse":["Axe","Mace","Staff","Sceptre","Unarmed"],"id":286},
@@ -605,7 +605,7 @@
 {"category":["MainSkillGem"],"reqLevel":28,"classification":1,"name":"Kinetic Rain","reqToUse":["Wand"],"id":588},
 {"category":["MainSkillGem"],"reqLevel":16,"classification":1,"name":"Wall of Force","reqToUse":["Wand"],"id":589},
 
-{"category":["SupportGem", "Exceptional"],"reqLevel":60,"classification":0,"name":"Empower Support","id":900},
-{"category":["SupportGem", "Exceptional"],"reqLevel":60,"classification":0,"name":"Enlighten Support","id":901},
-{"category":["SupportGem", "Exceptional"],"reqLevel":60,"classification":0,"name":"Enhance Support","id":902}
+{"category":["SupportGem", "Exceptional"],"reqLevel":60,"classification":0,"name":"Enhance Support","id":901},
+{"category":["SupportGem", "Exceptional"],"reqLevel":60,"classification":0,"name":"Empower Support","id":902},
+{"category":["SupportGem", "Exceptional"],"reqLevel":60,"classification":0,"name":"Enlighten Support","id":903}
 ]

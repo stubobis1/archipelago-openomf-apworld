@@ -63,7 +63,7 @@ def get_support_gem_amount_for_act(act, world: "PathOfExileWorld"):
     return min(world.options.support_gems_per_act.value * (act - 1), world.placed_total_support_gems if world.options.add_support_gems_to_item_pool.value else 0)
 
 def get_movement_gems_for_act(act, world: "PathOfExileWorld"):
-    return 2 if act >= 1 else 0
+    return Items.ACT_1_MOVEMENT_GEMS if act >= 1 else 0
 
 def get_passives_amount_for_act(act, world: "PathOfExileWorld"):
     return passives_required_for_act.get(act, 0) if world.options.add_passive_skill_points_to_item_pool.value else 0
@@ -110,12 +110,8 @@ def can_reach(act: int, world: "PathOfExileWorld", state: CollectionState) -> bo
     gem_slot_count = state.count_from_list([item['name'] for item in Items.get_max_links_items()], world.player)
     passive_count = state.count("Progressive passive point", world.player)
 
-    movement_gems_count = state.count_from_list([item['name'] for item in
-                                                Items.get_utility_skill_gems_by_required_level_usable_weapon_and_category(
-                                                    available_weapons=valid_weapon_types, level_minimum=1,
-                                                    level_maximum=acts[act].get("maxMonsterLevel", 0),
-                                                    required_categories={"EarlyMovement"}
-                                                )],world.player)
+    movement_gems_count = state.count_from_list(
+        [item['name'] for item in Items.get_by_has_every_category({"EarlyMovement"})],world.player)
 
     gems_for_our_weapons = [item['name'] for item in Items.get_main_skill_gems_by_required_level_and_useable_weapon(
             available_weapons= valid_weapon_types, level_minimum=1, level_maximum=acts[act].get("maxMonsterLevel", 0) )]
