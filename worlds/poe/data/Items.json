@@ -607,16 +607,17 @@
 
 {"category":["UtilSkillGem"],"reqLevel":10,"classification":1,"name":"Wither","id":592},
 
-{"category":["MainSkillGem"],"reqLevel":<UNKOWN>,"classification":1,"name":"Divine Blast","reqToUse":["Shield"],"id":593},
-{"category":["MainSkillGem"],"reqLevel":<UNKOWN>,"classification":1,"name":"Holy Hammers","reqToUse":["Mace","Staff"],"id":594},
-{"category":["MainSkillGem"],"reqLevel":<UNKOWN>,"classification":1,"name":"Holy Strike","reqToUse":["Mace","Sceptre","Staff"],"id":595},
-{"category":["UtilSkillGem"],"reqLevel":<UNKOWN>,"classification":0,"name":"Shield of Light","reqToUse":["Shield"],"id":596},
-{"category":["MainSkillGem"],"reqLevel":<UNKOWN>,"classification":1,"name":"Living Lightning Support","id":597},
+{"category":["MainSkillGem"],"reqLevel":28,"classification":1,"name":"Divine Blast","reqToUse":["Shield"],"id":593},
+{"category":["MainSkillGem"],"reqLevel":28,"classification":1,"name":"Holy Hammers","reqToUse":["Mace","Staff"],"id":594},
+{"category":["MainSkillGem"],"reqLevel":1, "classification":1,"name":"Holy Strike","reqToUse":["Mace","Sceptre","Staff"],"id":595},
+{"category":["UtilSkillGem"],"reqLevel":16,"classification":0,"name":"Shield of Light","reqToUse":["Shield"],"id":596},
 
-{"category":["SupportGem"],"reqLevel":<UNKOWN>,"classification":2,"name":"Blessed Call Support","id":598},
-{"category":["SupportGem"],"reqLevel":<UNKOWN>,"classification":2,"name":"Excommunicate","id":599},
-{"category":["SupportGem"],"reqLevel":<UNKOWN>,"classification":2,"name":"Exemplar Support","id":600},
-{"category":["SupportGem"],"reqLevel":<UNKOWN>,"classification":2,"name":"Hallow","id":601},
+{"category":["SupportGem"],"reqLevel":31,"classification":2,"name":"Blessed Call Support","id":597},
+{"category":["SupportGem"],"reqLevel":31,"classification":2,"name":"Excommunicate Support","id":598},
+{"category":["SupportGem"],"reqLevel":18,"classification":2,"name":"Exemplar Support","id":599},
+{"category":["SupportGem"],"reqLevel":1, "classification":2,"name":"Hallow Support","id":600},
+
+{"category":["UtilSkillGem"],"reqLevel":10,"classification":0,"name":"Portal","id":601},
 
 {"category":["SupportGem", "Exceptional"],"reqLevel":60,"classification":0,"name":"Enhance Support","id":901},
 {"category":["SupportGem", "Exceptional"],"reqLevel":60,"classification":0,"name":"Empower Support","id":902},
