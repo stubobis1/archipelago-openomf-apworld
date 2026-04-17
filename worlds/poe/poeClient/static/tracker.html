@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Archipelago PoE Tracker</title>
+  <link rel="icon" href="poeAP.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d0d0d;
+      --bg2:      #141410;
+      --bg3:      #1c1c16;
+      --border:   #2e2e22;
+      --gold:     #c8a860;
+      --gold-dim: #7a6030;
+      --text:     #c8b99a;
+      --text-dim: #7a6a4a;
+      --green:    #a5f3a5;
+      --green-dim:#3a6a3a;
+      --red:      #e87070;
+      --red-dim:  #6a2020;
+      --blue:     #70aae8;
+      --purple:   #b070e8;
+      --teal:     #70e8c8;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Georgia', serif;
+      font-size: 14px;
+      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    #header {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 0.6rem 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-shrink: 0;
+    }
+    #header-logo { height: 36px; width: auto; flex-shrink: 0; }
+    #header h1 { font-size: 1.1rem; color: var(--gold); letter-spacing: 0.06em; flex: 1; }
+    #status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--red-dim); border: 1px solid var(--red);
+      flex-shrink: 0; transition: background 0.3s, border-color 0.3s;
+    }
+    #status-dot.connected { background: var(--green-dim); border-color: var(--green); }
+    #status-dot.connecting { background: #6a5a20; border-color: var(--gold); animation: blink 1s step-end infinite; }
+    @keyframes blink { 50% { opacity: 0.3; } }
+    #status-text { font-size: 0.8rem; color: var(--text-dim); }
+    #btn-reconnect {
+      background: none; border: 1px solid var(--gold-dim);
+      color: var(--gold); font-family: inherit; font-size: 0.78rem;
+      padding: 0.2rem 0.6rem; cursor: pointer; border-radius: 2px;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    #btn-reconnect:hover { border-color: var(--gold); color: #e8c880; }
+
+    /* ── Connect Panel ── */
+    #connect-panel {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1.2rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      align-items: flex-end;
+    }
+    #connect-panel.hidden { display: none; }
+    .field { display: flex; flex-direction: column; gap: 0.25rem; }
+    .field label { font-size: 0.72rem; color: var(--text-dim); letter-spacing: 0.05em; text-transform: uppercase; }
+    .field input {
+      background: var(--bg3); border: 1px solid var(--border);
+      color: var(--text); font-family: monospace; font-size: 0.85rem;
+      padding: 0.35rem 0.6rem; outline: none; border-radius: 2px;
+      transition: border-color 0.2s;
+    }
+    .field input:focus { border-color: var(--gold-dim); }
+    #f-server { width: 220px; }
+    #f-slot   { width: 140px; }
+    #f-pass   { width: 130px; }
+    #btn-connect {
+      background: #1c1c10; border: 1px solid var(--gold-dim);
+      color: var(--gold); font-family: inherit; font-size: 0.88rem;
+      padding: 0.35rem 1rem; cursor: pointer; border-radius: 2px;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    #btn-connect:hover { background: #2a2a14; border-color: var(--gold); }
+    #connect-error { font-size: 0.8rem; color: var(--red); align-self: center; }
+
+    /* ── Tabs ── */
+    #tabs {
+      display: flex; gap: 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+      flex-shrink: 0;
+    }
+    .tab-btn {
+      background: none; border: none; border-bottom: 2px solid transparent;
+      color: var(--text-dim); font-family: inherit; font-size: 0.85rem;
+      padding: 0.55rem 1.1rem; cursor: pointer; letter-spacing: 0.04em;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+    .tab-badge {
+      display: inline-block; background: var(--bg3);
+      color: var(--text-dim); font-size: 0.68rem;
+      padding: 0 0.35rem; border-radius: 8px; margin-left: 0.3rem;
+    }
+
+    /* ── Main Content ── */
+    #content {
+      flex: 1; overflow-y: auto;
+      padding: 1rem 1.2rem;
+    }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* ── Overview ── */
+    #overview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1.2rem;
+    }
+    .stat-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      padding: 0.75rem 1rem; border-radius: 2px;
+    }
+    .stat-card .label { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-card .value { font-size: 1.5rem; color: var(--gold); font-weight: bold; }
+    .stat-card .sub { font-size: 0.75rem; color: var(--text-dim); }
+
+    #slot-info {
+      background: var(--bg2); border: 1px solid var(--border);
+      padding: 0.75rem 1rem; margin-bottom: 1.2rem; border-radius: 2px;
+    }
+    #slot-info table { border-collapse: collapse; }
+    #slot-info td { padding: 0.2rem 1rem 0.2rem 0; font-size: 0.85rem; }
+    #slot-info td:first-child { color: var(--text-dim); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; width: 100px; }
+
+    /* ── Messages ── */
+    #messages-feed {
+      background: var(--bg2); border: 1px solid var(--border);
+      padding: 0.5rem; max-height: 220px; overflow-y: auto;
+      font-family: monospace; font-size: 0.78rem; border-radius: 2px;
+    }
+    .msg-line { padding: 0.15rem 0; border-bottom: 1px solid #1a1a12; }
+    .msg-line:last-child { border-bottom: none; }
+    .msg-time { color: var(--text-dim); margin-right: 0.4rem; }
+    .msg-item { color: var(--teal); }
+    .msg-hint { color: var(--purple); }
+    .msg-chat { color: var(--text); }
+    .msg-system { color: var(--gold-dim); font-style: italic; }
+
+    /* ── Items sort bar ── */
+    .sort-bar {
+      display: flex; align-items: center; gap: 0.4rem;
+      margin-bottom: 0.75rem; font-size: 0.78rem; color: var(--text-dim);
+    }
+    .sort-btn {
+      background: var(--bg3); border: 1px solid var(--border);
+      color: var(--text-dim); font-family: inherit; font-size: 0.75rem;
+      padding: 0.2rem 0.55rem; cursor: pointer; border-radius: 2px;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .sort-btn.active { border-color: var(--gold-dim); color: var(--gold); }
+    .sort-btn:hover { border-color: var(--gold-dim); }
+
+    /* ── Class cards ── */
+    .class-section-header {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.3rem 0; margin-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer; user-select: none;
+    }
+    .class-section-header h3 { font-size: 0.82rem; color: var(--gold); letter-spacing: 0.06em; text-transform: uppercase; }
+    .class-section-header .cat-count { font-size: 0.72rem; color: var(--text-dim); }
+    .class-section-header .collapse-icon { color: var(--text-dim); font-size: 1.6rem; transition: transform 0.2s; flex-shrink: 0; }
+    .class-section-header.collapsed .collapse-icon { transform: rotate(-90deg); }
+    .class-section-header.collapsed + .class-rows { display: none; }
+    .class-rows { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1.2rem; }
+    .class-rows.collapsed { display: none; }
+    .class-row  { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: flex-start; }
+    .class-card {
+      display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
+      background: var(--bg3); border: 1px solid var(--border);
+      padding: 0.4rem 0.3rem; border-radius: 3px; width: 68px;
+      font-size: 0.65rem; text-align: center; color: var(--text-dim);
+      transition: border-color 0.2s;
+    }
+    .class-card img { width: 44px; height: 44px; object-fit: contain; opacity: 0.25; filter: grayscale(1); transition: opacity 0.2s, filter 0.2s; }
+    .class-card.received img  { opacity: 1; filter: none; }
+    .class-card.received.base { border-color: #4a2a10; color: #e08858; }
+    .class-card.received.asc  { border-color: #4a2a10; color: var(--gold); }
+
+    /* ── Items Tab ── */
+    .cat-section { margin-bottom: 1.2rem; }
+    .cat-header {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.3rem 0; margin-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer; user-select: none;
+    }
+    .cat-header h3 { font-size: 0.82rem; color: var(--gold); letter-spacing: 0.06em; text-transform: uppercase; }
+    .cat-header .cat-count { font-size: 0.72rem; color: var(--text-dim); }
+    .cat-header .collapse-icon { color: var(--text-dim); font-size: 1.6rem; transition: transform 0.2s; flex-shrink: 0; }
+    .cat-header.collapsed .collapse-icon { transform: rotate(-90deg); }
+    .cat-header.collapsed + .cat-body { display: none; }
+    .cat-body { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+    .cat-body.collapsed { display: none; }
+    .item-tag {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      background: var(--bg3); border: 1px solid var(--border);
+      padding: 0.15rem 0.4rem 0.15rem 0.2rem; border-radius: 2px;
+      font-size: 0.78rem; color: var(--text);
+    }
+    .item-tag .item-count {
+      background: var(--bg2); color: var(--gold);
+      font-size: 0.68rem; padding: 0 0.3rem; border-radius: 8px;
+    }
+    .item-img {
+      width: 22px; height: 22px; object-fit: contain;
+      image-rendering: pixelated; flex-shrink: 0;
+    }
+    .item-level {
+      background: var(--bg2); color: var(--text-dim);
+      font-size: 0.65rem; padding: 0 0.25rem; border-radius: 8px; margin-left: 0.1rem;
+    }
+    .item-tag.gem    { border-color: #2a5a2a; color: var(--green); }
+    .item-tag.support { border-color: #3a2a5a; color: var(--purple); }
+    .item-tag.util   { border-color: #1a3a5a; color: var(--blue); }
+    .item-tag.flask  { border-color: #4a3a10; color: #e8c860; }
+    .item-tag.class  { border-color: #4a2a10; color: var(--red); }
+    .item-tag.weapon { border-color: #3a2a10; color: #c8a870; }
+    .item-tag.armour { border-color: #2a3a4a; color: var(--teal); }
+
+    /* ── Locations Tab ── */
+    .act-section { margin-bottom: 0.75rem; }
+    .act-header {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.4rem 0.6rem; background: var(--bg2);
+      border: 1px solid var(--border); cursor: pointer;
+      border-radius: 2px; user-select: none;
+    }
+    .act-header h3 { font-size: 0.82rem; color: var(--gold); flex: 1; }
+    .act-progress { font-size: 0.75rem; color: var(--text-dim); white-space: nowrap; }
+    .act-toggle { color: var(--text-dim); font-size: 1.6rem; flex-shrink: 0; transition: transform 0.2s; }
+    .act-header.collapsed .act-toggle { transform: rotate(-90deg); }
+    .act-header.collapsed + .act-locations { display: none; }
+    .act-bar-wrap { flex: 1; background: var(--bg3); height: 6px; border-radius: 3px; overflow: hidden; min-width: 80px; }
+    .act-bar { height: 100%; background: var(--green-dim); border-radius: 3px; transition: width 0.4s; }
+    .act-bar.complete { background: var(--green); }
+    .act-locations {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-top: none; padding: 0.4rem;
+      display: flex; flex-wrap: wrap; gap: 0.25rem;
+    }
+    .loc-tag {
+      font-size: 0.7rem; padding: 0.15rem 0.4rem;
+      border-radius: 2px; border: 1px solid var(--border);
+      color: var(--text-dim);
+    }
+    .loc-tag.checked   { color: var(--green-dim); text-decoration: line-through; border-color: var(--green-dim); }
+    .loc-tag.unchecked { color: var(--text); border-color: var(--border); }
+    .loc-tag.unknown   { color: var(--text-dim); }
+
+    /* ── Hints Tab ── */
+    #hints-table-wrap { overflow-x: auto; }
+    #hints-table {
+      width: 100%; border-collapse: collapse; font-size: 0.8rem;
+    }
+    #hints-table th {
+      background: var(--bg2); color: var(--text-dim);
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
+      padding: 0.4rem 0.6rem; text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    #hints-table td { padding: 0.35rem 0.6rem; border-bottom: 1px solid var(--border); }
+    #hints-table tr:hover td { background: var(--bg2); }
+    #hints-table .hint-item { color: var(--teal); }
+    #hints-table .hint-loc { color: var(--text-dim); }
+    #hints-table .hint-found { color: var(--green); }
+    #hints-table .hint-notfound { color: var(--text-dim); }
+    #hints-table .hint-sender { color: var(--gold-dim); }
+
+    /* ── Empty states ── */
+    .empty-state {
+      color: var(--text-dim); font-size: 0.85rem; font-style: italic;
+      padding: 2rem; text-align: center;
+    }
+
+    /* ── Disconnected overlay ── */
+    #disconnected-msg {
+      color: var(--text-dim); font-style: italic;
+      padding: 3rem; text-align: center; font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+<div id="header">
+  <img id="header-logo" src="poeAP.png" alt="PoE Archipelago">
+  <h1>Archipelago · Path of Exile Tracker</h1>
+  <div id="status-dot" title="Disconnected"></div>
+  <span id="status-text">Disconnected</span>
+  <button id="btn-reconnect" title="Show connection panel">Connect</button>
+</div>
+
+<div id="connect-panel">
+  <div class="field">
+    <label>Server</label>
+    <input id="f-server" type="text" placeholder="archipelago.gg:38281" autocomplete="off" spellcheck="false">
+  </div>
+  <div class="field">
+    <label>Slot Name</label>
+    <input id="f-slot" type="text" placeholder="PlayerName" autocomplete="off">
+  </div>
+  <div class="field">
+    <label>Password</label>
+    <input id="f-pass" type="password" placeholder="(none)" autocomplete="off">
+  </div>
+  <button id="btn-connect">Connect</button>
+  <span id="connect-error"></span>
+</div>
+
+<div id="tabs">
+  <button class="tab-btn active" data-tab="overview">Overview</button>
+  <button class="tab-btn" data-tab="items">Items <span class="tab-badge" id="badge-items">0</span></button>
+  <button class="tab-btn" data-tab="locations">Locations <span class="tab-badge" id="badge-locs">0</span></button>
+  <button class="tab-btn" data-tab="hints">Hints <span class="tab-badge" id="badge-hints">0</span></button>
+</div>
+
+<div id="content">
+
+  <!-- Overview -->
+  <div class="tab-pane active" id="tab-overview">
+    <div id="disconnected-msg">Connect to an Archipelago server to begin tracking.</div>
+    <div id="overview-connected" style="display:none">
+      <div id="overview-grid">
+        <div class="stat-card">
+          <div class="label">Items Received</div>
+          <div class="value" id="stat-items">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Locations Checked</div>
+          <div class="value" id="stat-locs-checked">0</div>
+          <div class="sub" id="stat-locs-total"></div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Hints</div>
+          <div class="value" id="stat-hints">0</div>
+          <div class="sub" id="stat-hints-found"></div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Goal</div>
+          <div class="value" id="stat-goal" style="font-size:1rem">—</div>
+        </div>
+      </div>
+
+      <div id="slot-info">
+        <table>
+          <tr><td>Player</td><td id="si-player">—</td></tr>
+          <tr><td>Game</td><td id="si-game">—</td></tr>
+          <tr><td>Server</td><td id="si-server">—</td></tr>
+          <tr><td>Team</td><td id="si-team">—</td></tr>
+        </table>
+      </div>
+
+      <div style="font-size:0.78rem; color:var(--text-dim); margin-bottom:0.4rem; text-transform:uppercase; letter-spacing:0.05em;">Recent Messages</div>
+      <div id="messages-feed"></div>
+    </div>
+  </div>
+
+  <!-- Items -->
+  <div class="tab-pane" id="tab-items">
+    <div class="sort-bar" id="items-sort-bar" style="display:none">
+      Sort gems by:
+      <button class="sort-btn active" id="sort-alpha" data-sort="alpha">Alphabetical</button>
+      <button class="sort-btn"        id="sort-level" data-sort="level">Level Required</button>
+    </div>
+    <div class="empty-state" id="items-empty">No items received yet.</div>
+    <div id="items-content"></div>
+  </div>
+
+  <!-- Locations -->
+  <div class="tab-pane" id="tab-locations">
+    <div class="empty-state" id="locs-empty">Connect to view location progress.</div>
+    <div id="locations-content"></div>
+  </div>
+
+  <!-- Hints -->
+  <div class="tab-pane" id="tab-hints">
+    <div class="empty-state" id="hints-empty">No hints available.</div>
+    <div id="hints-table-wrap" style="display:none">
+      <table id="hints-table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Location</th>
+            <th>Found By</th>
+            <th>Found</th>
+          </tr>
+        </thead>
+        <tbody id="hints-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+import { Client } from 'https://cdn.jsdelivr.net/npm/archipelago.js@2.1.0/dist/index.js';
+
+// ── Data (inlined to work from file:// URLs) ──────────────────────────────────
+const POE_LOCATIONS = {"Scroll of Wisdom":1,"Portal Scroll":1,"Armourer's Scrap":1,"Blacksmith's Whetstone":1,"Orb of Transmutation":1,"Orb of Chance":1,"Orb of Augmentation":1,"Chromatic Orb":1,"Plate Vest - early act 1":1,"Iron Greaves - early act 1":1,"Crude Bow - early act 1":1,"Glass Shank - early act 1":1,"Iron Gauntlets - early act 1":1,"Iron Hat - early act 1":1,"Small Life Flask - early act 1":1,"Small Mana Flask - early act 1":1,"Driftwood Club - early act 1":1,"Rusted Sword - early act 1":1,"Driftwood Sceptre - early act 1":1,"Splintered Tower Shield - early act 1":1,"Driftwood Wand - early act 1":1,"Chain Belt - early act 1":1,"Rustic Sash - early act 1":1,"Shabby Jerkin - early act 1":1,"Rusted Hatchet - early act 1":1,"Iron Ring - early act 1":1,"Goathide Buckler - early act 1":1,"Paua Amulet - act 1":1,"Coral Amulet - act 1":1,"Simple Robe - act 1":1,"Wool Shoes - act 1":1,"Rawhide Boots - act 1":1,"Nailed Fist - act 1":1,"Wool Gloves - act 1":1,"Rawhide Gloves - act 1":1,"Vine Circlet - act 1":1,"Leather Cap - act 1":1,"Medium Life Flask - act 1":1,"Medium Mana Flask - act 1":1,"Twig Spirit Shield - act 1":1,"Rusted Spike - act 1":1,"Driftwood Maul - act 1":1,"Corroded Blade - act 1":1,"Scale Vest - act 1":1,"Chainmail Vest - act 1":1,"Padded Vest - act 1":1,"Fishscale Gauntlets - act 1":1,"Scare Mask - act 1":1,"Battered Helm - act 1":1,"Serrated Arrow Quiver - act 1":1,"Coral Ring - act 1":1,"Gnarled Branch - act 1":1,"Stone Axe - act 1":1,"Chain Boots - act 1":1,"Short Bow - act 1":1,"Skinning Knife - act 1":1,"Wrapped Mitts - act 1":1,"Rusted Coif - act 1":1,"Tribal Club - act 1":1,"Copper Sword - act 1":1,"Paua Ring - act 1":1,"Darkwood Sceptre - act 1":1,"Rotted Round Shield - act 1":1,"Spiked Bundle - act 1":1,"Corroded Tower Shield - act 1":1,"Chestplate - act 1":1,"Wrapped Boots - act 1":1,"Leatherscale Boots - act 1":1,"Large Life Flask - act 1":1,"Large Mana Flask - act 1":1,"Jade Hatchet - act 1":1,"Goat's Horn - act 1":1,"Jade Amulet - act 1":1,"Lapis Amulet - act 1":1,"Amber Amulet - act 1":1,"Sharktooth Claw - act 1":1,"Chain Gloves - act 1":1,"Cone Helmet - act 1":1,"Plank Kite Shield - act 1":1,"Whalebone Rapier - act 1":1,"Chainmail Tunic - act 1":1,"Light Brigandine - act 1":1,"Iron Circlet - act 1":1,"Sapphire Ring - act 1":1,"Pine Buckler - act 1":1,"Tribal Maul - act 1":1,"Longsword - act 1":1,"Oiled Vest - act 1":1,"Strapped Leather - act 1":1,"Steel Greaves - act 1":1,"Velvet Slippers - act 1":1,"Long Bow - act 1":1,"Goathide Gloves - act 1":1,"Fire Arrow Quiver - act 1":1,"Yew Spirit Shield - act 1":1,"Primitive Staff - act 1":1,"Jade Chopper - act 1":1,"Heavy Belt - act 1":1,"Leather Belt - act 1":1,"Tricorne - act 1":1,"Plague Mask - act 1":1,"Small Hybrid Flask - act 1":1,"Spiked Club - act 1":1,"Sabre - act 1":1,"Carving Knife - act 1":1,"Bronze Sceptre - act 1":1,"Silken Vest - act 1":1,"Plated Gauntlets - act 1":1,"Boarding Axe - act 1":1,"Rawhide Tower Shield - act 1":1,"Goathide Boots - act 1":1,"Awl - act 1":1,"Velvet Gloves - act 1":1,"Soldier Helmet - act 1":1,"Greater Life Flask - act 1":1,"Greater Mana Flask - act 1":1,"Topaz Ring - act 1":1,"Driftwood Spiked Shield - act 1":1,"Fir Round Shield - act 1":1,"Battered Foil - act 1":1,"Mallet - act 1":1,"Bastard Sword - act 1":1,"Somatic Wand - act 1":1,"Ringmail Boots - act 2":2,"Sallet - act 2":2,"Linden Kite Shield - act 2":2,"Woodsplitter - act 2":2,"Iron Staff - act 2":2,"Composite Bow - act 2":2,"Sharktooth Arrow Quiver - act 2":2,"Gold Amulet - act 2":2,"Stiletto - act 2":2,"Ironscale Gauntlets - act 2":2,"Stone Hammer - act 2":2,"Broad Sword - act 2":2,"Quartz Sceptre - act 2":2,"Bone Spirit Shield - act 2":2,"Strapped Boots - act 2":2,"Strapped Mitts - act 2":2,"Cleaver - act 2":2,"Ruby Ring - act 2":2,"Painted Buckler - act 2":2,"Ringmail Coat - act 2":2,"Buckskin Tunic - act 2":2,"Scale Doublet - act 2":2,"Copper Plate - act 2":2,"Cat's Paw - act 2":2,"Iron Mask - act 2":2,"Torture Cage - act 2":2,"Cedar Tower Shield - act 2":2,"Basket Rapier - act 2":2,"Sledgehammer - act 2":2,"Two-Handed Sword - act 2":2,"Scholar's Robe - act 2":2,"Padded Jacket - act 2":2,"Ironscale Boots - act 2":2,"Recurve Bow - act 2":2,"Barbute Helmet - act 2":2,"Grand Life Flask - act 2":2,"Grand Mana Flask - act 2":2,"Long Staff - act 2":2,"Poleaxe - act 2":2,"Quartz Wand - act 2":2,"Ringmail Gloves - act 2":2,"Turquoise Amulet - act 2":2,"Citrine Amulet - act 2":2,"Agate Amulet - act 2":2,"Studded Belt - act 2":2,"Cloth Belt - act 2":2,"Leather Hood - act 2":2,"Medium Hybrid Flask - act 2":2,"War Hammer - act 2":2,"War Sword - act 2":2,"Feathered Arrow Quiver - act 2":2,"Gold Ring - act 2":2,"Two-Stone Ring - act 2":2,"Boot Knife - act 2":2,"Iron Sceptre - act 2":2,"Studded Round Shield - act 2":2,"Alloyed Spiked Shield - act 2":2,"Reinforced Kite Shield - act 2":2,"Calling Wand - act 2":2,"Infantry Brigandine - act 2":2,"War Plate - act 2":2,"Chainmail Doublet - act 2":2,"Deerskin Gloves - act 2":2,"Broad Axe - act 2":2,"Oiled Coat - act 2":2,"Silk Slippers - act 2":2,"Deerskin Boots - act 2":2,"Blinder - act 2":2,"Great Helmet - act 2":2,"Jagged Foil - act 2":2,"Jagged Maul - act 2":2,"Etched Greatsword - act 2":2,"Plated Greaves - act 3":3,"Bone Bow - act 3":3,"Bronze Gauntlets - act 3":3,"Visored Sallet - act 3":3,"Hammered Buckler - act 3":3,"Tarnished Spirit Shield - act 3":3,"Double Axe - act 3":3,"Coiled Staff - act 3":3,"Giant Life Flask - act 3":3,"Giant Mana Flask - act 3":3,"Bladed Mace - act 3":3,"Ancient Sword - act 3":3,"Copper Kris - act 3":3,"Ochre Sceptre - act 3":3,"Copper Tower Shield - act 3":3,"Spiraled Wand - act 3":3,"Onyx Amulet - act 3":3,"Silken Garb - act 3":3,"Wild Leather - act 3":3,"Silk Gloves - act 3":3,"Arming Axe - act 3":3,"Penetrating Arrow Quiver - act 3":3,"Diamond Ring - act 3":3,"Moonstone Ring - act 3":3,"Timeworn Claw - act 3":3,"Tribal Circlet - act 3":3,"Close Helmet - act 3":3,"Antique Rapier - act 3":3,"Clasped Boots - act 3":3,"Bronzescale Gauntlets - act 3":3,"Scarlet Round Shield - act 3":3,"Burnished Spiked Shield - act 3":3,"Layered Kite Shield - act 3":3,"Brass Maul - act 3":3,"Ornate Sword - act 3":3,"Full Leather - act 3":3,"Full Plate - act 3":3,"Full Ringmail - act 3":3,"Full Scale Armour - act 3":3,"Scarlet Raiment - act 3":3,"Mage's Vestment - act 3":3,"Mesh Boots - act 3":3,"Royal Bow - act 3":3,"Festival Mask - act 3":3,"Ceremonial Mace - act 3":3,"Elegant Sword - act 3":3,"Skean - act 3":3,"Ritual Sceptre - act 3":3,"Jingling Spirit Shield - act 3":3,"Royal Staff - act 3":3,"Gilded Axe - act 3":3,"Decorative Axe - act 3":3,"War Buckler - act 3":3,"Bronzescale Boots - act 3":3,"Sparkling Claw - act 3":3,"Flaying Knife - act 3":3,"Wolf Pelt - act 3":3,"Large Hybrid Flask - act 3":3,"Colossal Life Flask - act 3":3,"Colossal Mana Flask - act 3":3,"Bone Ring - act 3":3,"Reinforced Tower Shield - act 3":3,"Elegant Foil - act 3":3,"Sage Wand - act 3":3,"Clasped Mitts - act 3":3,"Crusader Helmet - act 3":3,"Blunt Arrow Quiver - act 3":3,"Full Chainmail - act 3":3,"Silk Robe - act 3":3,"Arena Plate - act 3":3,"Waxed Garb - act 3":3,"Sun Leather - act 3":3,"Soldier's Brigandine - act 3":3,"Scholar Boots - act 3":3,"Death Bow - act 3":3,"Mesh Gloves - act 3":3,"Dream Mace - act 3":3,"Dusk Blade - act 3":3,"Imp Dagger - act 3":3,"Shadow Sceptre - act 3":3,"Fright Maul - act 3":3,"Spectral Sword - act 3":3,"Reinforced Greaves - act 4":4,"Nubuck Gloves - act 4":4,"Gilded Sallet - act 4":4,"Spectral Axe - act 4":4,"Splendid Round Shield - act 4":4,"Ornate Spiked Shield - act 4":4,"Brass Spirit Shield - act 4":4,"Shadow Axe - act 4":4,"Vile Staff - act 4":4,"Shackled Boots - act 4":4,"Nubuck Boots - act 4":4,"Fright Claw - act 4":4,"Bone Circlet - act 4":4,"Wyrm Mace - act 4":4,"Hook Sword - act 4":4,"Ceremonial Kite Shield - act 4":4,"Gilded Buckler - act 4":4,"Thorn Rapier - act 4":4,"Morning Star - act 4":4,"Pagan Wand - act 4":4,"Thief's Garb - act 4":4,"Cabalist Regalia - act 4":4,"Bone Armour - act 4":4,"Holy Chainmail - act 4":4,"Lordly Plate - act 4":4,"Field Lamellar - act 4":4,"Grove Bow - act 4":4,"Steel Gauntlets - act 4":4,"Golden Mask - act 4":4,"Gladiator Helmet - act 4":4,"Etched Hatchet - act 4":4,"Petrified Club - act 4":4,"Variscite Blade - act 4":4,"Grinning Fetish - act 4":4,"Painted Tower Shield - act 4":4,"Curved Blade - act 4":4,"Faun's Horn - act 4":4,"Riveted Boots - act 4":4,"Steelscale Boots - act 4":4,"Reflex Bow - act 4":4,"Double Claw - act 4":4,"Prong Dagger - act 4":4,"Embroidered Gloves - act 4":4,"Steelscale Gauntlets - act 4":4,"Trapper Mitts - act 4":4,"Secutor Helm - act 4":4,"Sacred Life Flask - act 4":4,"Sacred Mana Flask - act 4":4,"Jasper Axe - act 4":4,"Two-Point Arrow Quiver - act 4":4,"Horned Sceptre - act 4":4,"Crescent Staff - act 4":4,"Smallsword - act 4":4,"Dagger Axe - act 4":4,"Totemic Maul - act 4":4,"Butcher Sword - act 4":4,"Eelskin Tunic - act 4":4,"Sage's Robe - act 4":4,"Bronze Plate - act 4":4,"Antique Greaves - act 4":4,"Thresher Claw - act 4":4,"Riveted Gloves - act 4":4,"Aventail Helmet - act 4":4,"Walnut Spirit Shield - act 4":4,"Woodful Staff - act 4":4,"Wyrmbone Rapier - act 4":4,"Jasper Chopper - act 4":4,"Wyrmscale Doublet - act 4":4,"Satin Slippers - act 4":4,"Decurve Bow - act 4":4,"Eelskin Gloves - act 4":4,"Raven Mask - act 4":4,"Barbed Club - act 4":4,"Cutlass - act 4":4,"Amethyst Ring - act 4":4,"Butcher Knife - act 4":4,"Sekhem - act 4":4,"Oak Buckler - act 4":4,"Latticed Ringmail - act 4":4,"Eelskin Boots - act 4":4,"Antique Gauntlets - act 4":4,"Lunaris Circlet - act 4":4,"Tomahawk - act 4":4,"Buckskin Tower Shield - act 4":4,"Maple Round Shield - act 4":4,"Redwood Spiked Shield - act 4":4,"Quilted Jacket - act 5":5,"Zealot Boots - act 5":5,"Gouger - act 5":5,"Reaver Helmet - act 5":5,"Colossal Hybrid Flask - act 5":5,"Spike-Point Arrow Quiver - act 5":5,"Etched Kite Shield - act 5":5,"Burnished Foil - act 5":5,"Great Mallet - act 5":5,"Footman Sword - act 5":5,"Blasting Wand - act 5":5,"Silken Wrap - act 5":5,"Frontier Leather - act 5":5,"Battle Plate - act 5":5,"Trapper Boots - act 5":5,"Compound Bow - act 5":5,"Poignard - act 5":5,"Satin Gloves - act 5":5,"Hunter Hood - act 5":5,"Rock Breaker - act 5":5,"Baselard - act 5":5,"Crystal Sceptre - act 5":5,"Ivory Spirit Shield - act 5":5,"Timber Axe - act 5":5,"Military Staff - act 5":5,"Hussar Brigandine - act 5":5,"Serpentscale Boots - act 5":5,"Hallowed Life Flask - act 5":5,"Hallowed Mana Flask - act 5":5,"Wrist Chopper - act 5":5,"Enameled Buckler - act 5":5,"Crusader Chainmail - act 5":5,"Tiger's Paw - act 5":5,"Zealot Gloves - act 5":5,"Serpentscale Gauntlets - act 5":5,"Fencer Helm - act 5":5,"Mahogany Tower Shield - act 5":5,"Estoc - act 5":5,"Sleek Coat - act 5":5,"Sharkskin Boots - act 5":5,"Samite Slippers - act 5":5,"Sniper Bow - act 5":5,"Zealot Helmet - act 5":5,"Battle Hammer - act 5":5,"Battle Sword - act 5":5,"Boot Blade - act 5":5,"Lead Sceptre - act 5":5,"Steelhead - act 5":5,"Highland Blade - act 5":5,"Sun Plate - act 6":6,"Glorious Leather - act 6":6,"Conjurer's Vestment - act 6":6,"Sharkskin Gloves - act 6":6,"Ambush Mitts - act 6":6,"Callous Mask - act 6":6,"War Axe - act 6":6,"Blazing Arrow Quiver - act 6":6,"Unset Ring - act 6":6,"Ancient Spirit Shield - act 6":6,"Spiked Round Shield - act 6":6,"Compound Spiked Shield - act 6":6,"Quarterstaff - act 6":6,"Headsman Axe - act 6":6,"Crystal Wand - act 6":6,"Full Wyrmscale - act 6":6,"Ancient Greaves - act 6":6,"Gut Ripper - act 6":6,"Corrugated Buckler - act 6":6,"Steel Kite Shield - act 6":6,"Serrated Foil - act 6":6,"Ornate Ringmail - act 6":6,"Ambush Boots - act 6":6,"Ivory Bow - act 6":6,"Samite Gloves - act 6":6,"Ancient Gauntlets - act 6":6,"Noble Tricorne - act 6":6,"Flanged Mace - act 6":6,"Elder Sword - act 6":6,"Golden Kris - act 6":6,"Blood Sceptre - act 6":6,"Bronze Tower Shield - act 6":6,"Crimson Raiment - act 6":6,"Steel Circlet - act 6":6,"Siege Helmet - act 6":6,"Chest Splitter - act 6":6,"Spiny Maul - act 6":6,"Engraved Greatsword - act 6":6,"Spidersilk Robe - act 6":6,"Coronal Leather - act 6":6,"Colosseum Plate - act 6":6,"Soldier Boots - act 6":6,"Prehistoric Claw - act 6":6,"Wyrmscale Gauntlets - act 6":6,"Broadhead Arrow Quiver - act 6":6,"Chiming Spirit Shield - act 6":6,"Crimson Round Shield - act 6":6,"Polished Spiked Shield - act 6":6,"Primeval Rapier - act 6":6,"Labrys - act 6":6,"Coiled Wand - act 6":6,"Serpentine Staff - act 6":6,"Commander's Brigandine - act 7":7,"Highborn Bow - act 7":7,"Carnal Mitts - act 7":7,"Sacred Hybrid Flask - act 7":7,"Sanctified Life Flask - act 7":7,"Sanctified Mana Flask - act 7":7,"Ornate Mace - act 7":7,"Graceful Sword - act 7":7,"Royal Skean - act 7":7,"Royal Sceptre - act 7":7,"Laminated Kite Shield - act 7":7,"Battle Buckler - act 7":7,"Convening Wand - act 7":7,"Chain Hauberk - act 7":7,"Wyrmscale Boots - act 7":7,"Trisula - act 7":7,"Soldier Gloves - act 7":7,"Lacquered Helmet - act 7":7,"Ceremonial Axe - act 7":7,"Girded Tower Shield - act 7":7,"Plated Maul - act 7":7,"Tiger Sword - act 7":7,"Lacquered Garb - act 7":7,"Noble Claw - act 7":7,"Regicide Mask - act 7":7,"Highborn Staff - act 7":7,"Fancy Foil - act 7":7,"Noble Axe - act 7":7,"Destroyer Regalia - act 7":7,"Majestic Plate - act 7":7,"Cutthroat's Garb - act 7":7,"Conjurer Boots - act 7":7,"Decimation Bow - act 7":7,"Goliath Gauntlets - act 7":7,"Great Crown - act 7":7,"Phantom Mace - act 7":7,"Twilight Blade - act 7":7,"Fiend Dagger - act 7":7,"Abyssal Sceptre - act 7":7,"Thorium Spirit Shield - act 7":7,"Omen Wand - act 7":7,"Battle Lamellar - act 8":8,"Goliath Greaves - act 8":8,"Shagreen Gloves - act 8":8,"Necromancer Circlet - act 8":8,"Wraith Axe - act 8":8,"Golden Buckler - act 8":8,"Baroque Round Shield - act 8":8,"Sovereign Spiked Shield - act 8":8,"Dread Maul - act 8":8,"Wraith Sword - act 8":8,"Devout Chainmail - act 8":8,"Shagreen Boots - act 8":8,"Carnal Boots - act 8":8,"Eagle Claw - act 8":8,"Conjurer Gloves - act 8":8,"Samnite Helmet - act 8":8,"Ursine Pelt - act 8":8,"Dragon Mace - act 8":8,"Grappler - act 8":8,"Vile Arrow Quiver - act 8":8,"Stag Sceptre - act 8":8,"Angelic Kite Shield - act 8":8,"Crested Tower Shield - act 8":8,"Apex Rapier - act 8":8,"Abyssal Axe - act 8":8,"Heathen Wand - act 8":8,"Foul Staff - act 8":8,"Savant's Robe - act 8":8,"Golden Plate - act 8":8,"Sharkskin Tunic - act 8":8,"Crypt Armour - act 8":8,"Thicket Bow - act 8":8,"Gutting Knife - act 8":8,"Engraved Hatchet - act 8":8,"Ancestral Club - act 8":8,"Gemstone Sword - act 8":8,"Karui Sceptre - act 8":8,"Lacewood Spirit Shield - act 8":8,"Solar Maul - act 8":8,"Lithe Blade - act 8":8,"Demon's Horn - act 8":8,"Dragonscale Doublet - act 8":8,"Steelwood Bow - act 8":8,"Twin Claw - act 8":8,"Legion Gloves - act 8":8,"Harlequin Mask - act 8":8,"Karui Axe - act 8":8,"Ironwood Buckler - act 8":8,"Moon Staff - act 8":8,"Courtesan Sword - act 8":8,"Karui Maul - act 8":8,"Headman's Sword - act 8":8,"Loricated Ringmail - act 8":8,"Legion Boots - act 8":8,"Citadel Bow - act 8":8,"Great White Claw - act 8":8,"Assassin's Mitts - act 8":8,"Fluted Bascinet - act 8":8,"Magistrate Crown - act 8":8,"Tenderizer - act 8":8,"Corsair Sword - act 8":8,"Slaughter Knife - act 8":8,"Tyrant's Sekhem - act 8":8,"Shagreen Tower Shield - act 8":8,"Teak Round Shield - act 8":8,"Alder Spiked Shield - act 8":8,"Primordial Staff - act 8":8,"Dragonbone Rapier - act 8":8,"Karui Chopper - act 8":8,"Necromancer Silks - act 8":8,"Crusader Plate - act 8":8,"Destiny Leather - act 8":8,"Sentinel Jacket - act 8":8,"Hydrascale Boots - act 8":8,"Hydrascale Gauntlets - act 8":8,"Solaris Circlet - act 8":8,"Siege Axe - act 8":8,"Fossilised Spirit Shield - act 8":8,"Branded Kite Shield - act 8":8,"Talon Axe - act 8":8,"Colossus Mallet - act 8":8,"Reaver Sword - act 8":8,"Kinetic Wand - act 8":8,"Desert Brigandine - act 9":9,"Ranger Bow - act 9":9,"Throat Stabber - act 9":9,"Ambusher - act 9":9,"Arcanist Gloves - act 9":9,"Silken Hood - act 9":9,"Ezomyte Burgonet - act 9":9,"Hallowed Hybrid Flask - act 9":9,"Divine Life Flask - act 9":9,"Divine Mana Flask - act 9":9,"Gavel - act 9":9,"Gladius - act 9":9,"Opal Sceptre - act 9":9,"Lacquered Buckler - act 9":9,"Tempered Foil - act 9":9,"Sundering Axe - act 9":9,"Ezomyte Staff - act 9":9,"Conquest Chainmail - act 9":9,"Arcanist Slippers - act 9":9,"Reaver Axe - act 9":9,"Heavy Arrow Quiver - act 9":9,"Ebony Tower Shield - act 9":9,"Piledriver - act 9":9,"Ezomyte Blade - act 9":9,"Astral Plate - act 9":9,"Exquisite Leather - act 9":9,"Varnished Coat - act 9":9,"Occultist's Vestment - act 9":9,"Vaal Greaves - act 9":9,"Stealth Boots - act 9":9,"Assassin Bow - act 9":9,"Hellion's Paw - act 9":9,"Stealth Gloves - act 9":9,"Vaal Mask - act 9":9,"Legion Hammer - act 9":9,"Legion Sword - act 9":9,"Ezomyte Dagger - act 9":9,"Platinum Sceptre - act 9":9,"Spiny Round Shield - act 9":9,"Vaal Spirit Shield - act 9":9,"Ezomyte Spiked Shield - act 9":9,"Champion Kite Shield - act 9":9,"Lathi - act 9":9,"Pecoraro - act 9":9,"Ezomyte Axe - act 9":9,"Opal Wand - act 9":9,"Full Dragonscale - act 9":9,"Assassin's Boots - act 9":9,"Vaal Gauntlets - act 9":9,"Prophet Crown - act 9":9,"Pig-Faced Bascinet - act 9":9,"Butcher Axe - act 9":9,"Vaal Buckler - act 9":9,"Meatgrinder - act 9":9,"Vaal Greatsword - act 9":9,"Elegant Ringmail - act 10":10,"Crusader Boots - act 10":10,"Spine Bow - act 10":10,"Eye Gouger - act 10":10,"Sinner Tricorne - act 10":10,"Pernach - act 10":10,"Vaal Blade - act 10":10,"Platinum Kris - act 10":10,"Vaal Sceptre - act 10":10,"Ezomyte Tower Shield - act 10":10,"Spiraled Foil - act 10":10,"Vaal Axe - act 10":10,"Maelstr\u00f6m Staff - act 10":10,"Zodiac Leather - act 10":10,"Widowsilk Robe - act 10":10,"Gladiator Plate - act 10":10,"Blood Raiment - act 10":10,"Dragonscale Boots - act 10":10,"Mind Cage - act 10":10,"Royal Burgonet - act 10":10,"Eternal Life Flask - act 10":10,"Eternal Mana Flask - act 10":10,"Vaal Hatchet - act 10":10,"Harmonic Spirit Shield - act 10":10,"Mosaic Kite Shield - act 10":10,"Imperial Maul - act 10":10,"Lion Sword - act 10":10,"Tornado Wand - act 10":10,"General's Brigandine - act 10":10,"Imperial Bow - act 10":10,"Vaal Claw - act 10":10,"Crusader Gloves - act 10":10,"Auric Mace - act 10":10,"Eternal Sword - act 10":10,"Primal Arrow Quiver - act 10":10,"Imperial Skean - act 10":10,"Carnal Sceptre - act 10":10,"Mirrored Spiked Shield - act 10":10,"Crusader Buckler - act 10":10,"Cardinal Round Shield - act 10":10,"Imperial Staff - act 10":10,"Vaal Rapier - act 10":10,"Despot Axe - act 10":10,"Saint's Hauberk - maps":11,"Sorcerer Boots - maps":11,"Dragonscale Gauntlets - maps":11,"Murder Mitts - maps":11,"Nightmare Bascinet - maps":11,"Deicide Mask - maps":11,"Royal Axe - maps":11,"Colossal Tower Shield - maps":11,"Terror Maul - maps":11,"Infernal Sword - maps":11,"Vaal Regalia - maps":11,"Assassin's Garb - maps":11,"Sadist Garb - maps":11,"Glorious Plate - maps":11,"Titan Greaves - maps":11,"Harbinger Bow - maps":11,"Imperial Claw - maps":11,"Praetor Crown - maps":11,"Nightmare Mace - maps":11,"Midnight Blade - maps":11,"Demon Dagger - maps":11,"Void Sceptre - maps":11,"Titanium Spirit Shield - maps":11,"Archon Kite Shield - maps":11,"Jewelled Foil - maps":11,"Void Axe - maps":11,"Prophecy Wand - maps":11,"Judgement Staff - maps":11,"Triumphant Lamellar - maps":11,"Slink Boots - maps":11,"Murder Boots - maps":11,"Sorcerer Gloves - maps":11,"Titan Gauntlets - maps":11,"Hubris Circlet - maps":11,"Eternal Burgonet - maps":11,"Infernal Axe - maps":11,"Imperial Buckler - maps":11,"Coronal Maul - maps":11,"Saintly Chainmail - maps":11,"Two-Toned Boots - maps":11,"Fugitive Boots - maps":11,"Terror Claw - maps":11,"Sai - maps":11,"Apothecary's Gloves - maps":11,"Spiked Gloves - maps":11,"Slink Gloves - maps":11,"Gripped Gloves - maps":11,"Fingerless Silk Gloves - maps":11,"Lion Pelt - maps":11,"Behemoth Mace - maps":11,"Tiger Hook - maps":11,"Sambar Sceptre - maps":11,"Elegant Round Shield - maps":11,"Pinnacle Tower Shield - maps":11,"Supreme Spiked Shield - maps":11,"Eclipse Staff - maps":11,"Harpy Rapier - maps":11,"Fleshripper - maps":11,"Exquisite Blade - maps":11,"Profane Wand - maps":11,"Carnal Armour - maps":11,"Maraketh Bow - maps":11,"Runic Hatchet - maps":11,"Gemini Claw - maps":11,"Dragoon Sword - maps":11,"Convoking Wand - maps":11,"Crystal Belt - maps":11,"Vanguard Belt - maps":11,"Full Wyvernscale - maps":11,"Titan Plate - maps":11,"Grand Ringmail - maps":11,"Arcane Vestment - maps":11,"Supreme Leather - maps":11,"Sanguine Raiment - maps":11,"Jester Mask - maps":11,"General's Helmet - maps":11,"Bone Helmet - maps":11,"Faithful Helmet - maps":11,"Moonlit Circlet - maps":11,"Dire Pelt - maps":11,"Knight Helm - maps":11,"Marble Amulet - maps":11,"Seaglass Amulet - maps":11,"Artillery Quiver - maps":11,"Blue Pearl Amulet - maps":11,"Paladin's Hauberk - maps":11,"Marshall's Brigandine - maps":11,"Torturer Garb - maps":11,"Nightweave Robe - maps":11,"Astral Leather - maps":11,"Legion Plate - maps":11,"Chimerascale Boots - maps":11,"Martyr Boots - maps":11,"Infiltrator Boots - maps":11,"Sage Slippers - maps":11,"Harpyskin Boots - maps":11,"Precursor Greaves - maps":11,"Chimerascale Gauntlets - maps":11,"Martyr Gloves - maps":11,"Sage Gloves - maps":11,"Infiltrator Mitts - maps":11,"Harpyskin Gloves - maps":11,"Precursor Gauntlets - maps":11,"Conqueror's Helmet - maps":11,"Conquest Helmet - maps":11,"Paladin Crown - maps":11,"Sunfire Circlet - maps":11,"Grizzly Pelt - maps":11,"Ancient Mask - maps":11,"Iolite Ring - maps":11,"Opal Ring - maps":11,"Steel Ring - maps":11,"Cerulean Ring - maps":11,"Vermillion Ring - maps":11,"Conquest Lamellar - maps":11,"Syndicate's Garb - maps":11,"Twilight Regalia - maps":11,"Royal Plate - maps":11,"Necrotic Armour - maps":11,"Sacred Chainmail - maps":11,"Paladin Boots - maps":11,"Wyvernscale Boots - maps":11,"Phantom Boots - maps":11,"Velour Boots - maps":11,"Warlock Boots - maps":11,"Leviathan Greaves - maps":11,"Paladin Gloves - maps":11,"Wyvernscale Gauntlets - maps":11,"Phantom Mitts - maps":11,"Velour Gloves - maps":11,"Warlock Gloves - maps":11,"Leviathan Gauntlets - maps":11,"Divine Crown - maps":11,"Torturer's Mask - maps":11,"Giantslayer Helmet - maps":11,"Majestic Pelt - maps":11,"Haunted Bascinet - maps":11,"Lich's Circlet - maps":11,"Reach Level 2":"level","Reach Level 3":"level","Reach Level 4":"level","Reach Level 5":"level","Reach Level 6":"level","Reach Level 7":"level","Reach Level 8":"level","Reach Level 9":"level","Reach Level 10":"level","Reach Level 11":"level","Reach Level 12":"level","Reach Level 13":"level","Reach Level 14":"level","Reach Level 15":"level","Reach Level 16":"level","Reach Level 17":"level","Reach Level 18":"level","Reach Level 19":"level","Reach Level 20":"level","Reach Level 21":"level","Reach Level 22":"level","Reach Level 23":"level","Reach Level 24":"level","Reach Level 25":"level","Reach Level 26":"level","Reach Level 27":"level","Reach Level 28":"level","Reach Level 29":"level","Reach Level 30":"level","Reach Level 31":"level","Reach Level 32":"level","Reach Level 33":"level","Reach Level 34":"level","Reach Level 35":"level","Reach Level 36":"level","Reach Level 37":"level","Reach Level 38":"level","Reach Level 39":"level","Reach Level 40":"level","Reach Level 41":"level","Reach Level 42":"level","Reach Level 43":"level","Reach Level 44":"level","Reach Level 45":"level","Reach Level 46":"level","Reach Level 47":"level","Reach Level 48":"level","Reach Level 49":"level","Reach Level 50":"level","Reach Level 51":"level","Reach Level 52":"level","Reach Level 53":"level","Reach Level 54":"level","Reach Level 55":"level","Reach Level 56":"level","Reach Level 57":"level","Reach Level 58":"level","Reach Level 59":"level","Reach Level 60":"level","Reach Level 61":"level","Reach Level 62":"level","Reach Level 63":"level","Reach Level 64":"level","Reach Level 65":"level","Reach Level 66":"level","Reach Level 67":"level","Reach Level 68":"level","Reach Level 69":"level","Reach Level 70":"level","Reach Level 71":"level","Reach Level 72":"level","Reach Level 73":"level","Reach Level 74":"level","Reach Level 75":"level","Reach Level 76":"level","Reach Level 77":"level","Reach Level 78":"level","Reach Level 79":"level","Reach Level 80":"level","Reach Level 81":"level","Reach Level 82":"level","Reach Level 83":"level","Reach Level 84":"level","Reach Level 85":"level","Reach Level 86":"level","Reach Level 87":"level","Reach Level 88":"level","Reach Level 89":"level","Reach Level 90":"level","Reach Level 91":"level","Reach Level 92":"level","Reach Level 93":"level","Reach Level 94":"level","Reach Level 95":"level","Reach Level 96":"level","Reach Level 97":"level","Reach Level 98":"level","Reach Level 99":"level","Reach Level 100":"level","defeat hydra":"0_boss","defeat phoenix":"0_boss","defeat chimera":"0_boss","defeat minotaur":"0_boss","defeat shaper":"0_boss","defeat uber_shaper":"0_boss","defeat elder":"0_boss","defeat uber_elder":"0_boss","defeat uber_uber_elder":"0_boss","defeat atziri":"0_boss","defeat al-hezmin":"0_boss","defeat baran":"0_boss","defeat drox":"0_boss","defeat veritania":"0_boss","defeat sirus":"0_boss","defeat uber_sirus":"0_boss","defeat maven":"0_boss","defeat uber_maven":"0_boss","defeat exarch":"0_boss","defeat uber_exarch":"0_boss","defeat eater":"0_boss","defeat uber_eater":"0_boss","defeat incarnation_of_neglect":"0_boss","defeat incarnation_of_fear":"0_boss","defeat incarnation_of_dread":"0_boss","defeat cortex":"0_boss","defeat uber_cortex":"0_boss"};
+
+const POE_ITEMS = {"Progressive passive point":"Progression","Progressive Flask Unlock":"Flasks","Progressive Normal Flask Unlock":"Flasks","Progressive Magic Flask Unlock":"Flasks","Progressive Unique Flask Unlock":"Flasks","Scion":"Classes","Marauder":"Classes","Duelist":"Classes","Ranger":"Classes","Shadow":"Classes","Witch":"Classes","Templar":"Classes","Ascendant":"Ascendancies","Berserker":"Ascendancies","Chieftain":"Ascendancies","Juggernaut":"Ascendancies","Champion":"Ascendancies","Gladiator":"Ascendancies","Slayer":"Ascendancies","Deadeye":"Ascendancies","Pathfinder":"Ascendancies","Warden":"Ascendancies","Assassin":"Ascendancies","Saboteur":"Ascendancies","Trickster":"Ascendancies","Elementalist":"Ascendancies","Necromancer":"Ascendancies","Occultist":"Ascendancies","Guardian":"Ascendancies","Hierophant":"Ascendancies","Inquisitor":"Ascendancies","Progressive Axe":"Weapons","Progressive Bow":"Weapons","Progressive Claw":"Weapons","Progressive Dagger":"Weapons","Progressive Mace":"Weapons","Progressive Sceptre":"Weapons","Progressive Staff":"Weapons","Progressive Sword":"Weapons","Progressive Wand":"Weapons","Progressive BodyArmour":"Armour","Progressive Boots":"Armour","Progressive Gloves":"Armour","Progressive Helmet":"Armour","Progressive Amulet":"Armour","Progressive Belt":"Armour","Progressive Ring (left)":"Armour","Progressive Ring (right)":"Armour","Progressive Quiver":"Armour","Progressive Shield":"Armour","Progressive Fishing Rod":"Weapons","Normal Axe":"Weapons","Normal Bow":"Weapons","Normal Claw":"Weapons","Normal Dagger":"Weapons","Normal Mace":"Weapons","Normal Sceptre":"Weapons","Normal Staff":"Weapons","Normal Sword":"Weapons","Normal Wand":"Weapons","Normal BodyArmour":"Armour","Normal Boots":"Armour","Normal Gloves":"Armour","Normal Helmet":"Armour","Normal Amulet":"Armour","Normal Belt":"Armour","Normal Ring (left)":"Armour","Normal Ring (right)":"Armour","Normal Quiver":"Armour","Normal Shield":"Armour","Normal Fishing Rod":"Other","Magic Axe":"Weapons","Magic Bow":"Weapons","Magic Claw":"Weapons","Magic Dagger":"Weapons","Magic Mace":"Weapons","Magic Sceptre":"Weapons","Magic Staff":"Weapons","Magic Sword":"Weapons","Magic Wand":"Weapons","Magic BodyArmour":"Armour","Magic Boots":"Armour","Magic Gloves":"Armour","Magic Helmet":"Armour","Magic Amulet":"Armour","Magic Belt":"Armour","Magic Ring (left)":"Armour","Magic Ring (right)":"Armour","Magic Quiver":"Armour","Magic Shield":"Armour","Magic Fishing Rod":"Other","Rare Axe":"Weapons","Rare Bow":"Weapons","Rare Claw":"Weapons","Rare Dagger":"Weapons","Rare Mace":"Weapons","Rare Sceptre":"Weapons","Rare Staff":"Weapons","Rare Sword":"Weapons","Rare Wand":"Weapons","Rare BodyArmour":"Armour","Rare Boots":"Armour","Rare Gloves":"Armour","Rare Helmet":"Armour","Rare Amulet":"Armour","Rare Belt":"Armour","Rare Ring (left)":"Armour","Rare Ring (right)":"Armour","Rare Quiver":"Armour","Rare Shield":"Armour","Rare Fishing Rod":"Other","Unique Axe":"Weapons","Unique Bow":"Weapons","Unique Claw":"Weapons","Unique Dagger":"Weapons","Unique Mace":"Weapons","Unique Sceptre":"Weapons","Unique Staff":"Weapons","Unique Sword":"Weapons","Unique Wand":"Weapons","Unique BodyArmour":"Armour","Unique Boots":"Armour","Unique Gloves":"Armour","Unique Helmet":"Armour","Unique Amulet":"Armour","Unique Belt":"Armour","Unique Ring (left)":"Armour","Unique Ring (right)":"Armour","Unique Quiver":"Armour","Unique Shield":"Armour","Unique Fishing Rod":"Other","Progressive max links - Helm":"Progression","Progressive max links - Gloves":"Progression","Progressive max links - Boots":"Progression","Progressive max links - BodyArmour":"Progression","Progressive max links - Weapon":"Progression","Progressive max links - Offhand":"Progression","Vaal Gems":"Other","Alternate Gems":"Other","Animate Weapon":"Skill Gems","Artillery Ballista":"Skill Gems","Barrage":"Skill Gems","Bear Trap":"Skill Gems","Blade Blast":"Skill Gems","Blade Flurry":"Skill Gems","Blade Trap":"Skill Gems","Blade Vortex":"Skill Gems","Bladefall":"Skill Gems","Blast Rain":"Skill Gems","Burning Arrow":"Skill Gems","Caustic Arrow":"Skill Gems","Charged Dash":"Skill Gems","Cobra Lash":"Skill Gems","Cremation":"Skill Gems","Cyclone":"Skill Gems","Detonate Dead":"Skill Gems","Double Strike":"Skill Gems","Dual Strike":"Skill Gems","Elemental Hit":"Skill Gems","Ensnaring Arrow":"Skill Gems","Ethereal Knives":"Skill Gems","Explosive Arrow":"Skill Gems","Explosive Concoction":"Skill Gems","Explosive Trap":"Skill Gems","Fire Trap":"Skill Gems","Flamethrower Trap":"Skill Gems","Flicker Strike":"Skill Gems","Frenzy":"Skill Gems","Frost Blades":"Skill Gems","Galvanic Arrow":"Skill Gems","Ice Shot":"Skill Gems","Ice Trap":"Skill Gems","Lacerate":"Skill Gems","Lancing Steel":"Skill Gems","Lightning Arrow":"Skill Gems","Lightning Strike":"Skill Gems","Pestilent Strike":"Skill Gems","Poisonous Concoction":"Skill Gems","Puncture":"Skill Gems","Rain of Arrows":"Skill Gems","Reave":"Skill Gems","Scourge Arrow":"Skill Gems","Seismic Trap":"Skill Gems","Shattering Steel":"Skill Gems","Shrapnel Ballista":"Skill Gems","Siege Ballista":"Skill Gems","Snipe":"Skill Gems","Spectral Helix":"Skill Gems","Spectral Shield Throw":"Skill Gems","Spectral Throw":"Skill Gems","Split Arrow":"Skill Gems","Splitting Steel":"Skill Gems","Storm Rain":"Skill Gems","Tornado":"Skill Gems","Tornado Shot":"Skill Gems","Toxic Rain":"Skill Gems","Unearth":"Skill Gems","Venom Gyre":"Skill Gems","Viper Strike":"Skill Gems","Volatile Dead":"Skill Gems","Whirling Blades":"Skill Gems","Wild Strike":"Skill Gems","Arc":"Skill Gems","Arcanist Brand":"Skill Gems","Armageddon Brand":"Skill Gems","Ball Lightning":"Skill Gems","Bane":"Skill Gems","Blazing Salvo":"Skill Gems","Blight":"Skill Gems","Bodyswap":"Skill Gems","Bone Offering":"Skill Gems","Cold Snap":"Skill Gems","Contagion":"Skill Gems","Conversion Trap":"Skill Gems","Crackling Lance":"Skill Gems","Creeping Frost":"Skill Gems","Divine Ire":"Skill Gems","Energy Blade":"Skill Gems","Essence Drain":"Skill Gems","Eye of Winter":"Skill Gems","Fireball":"Skill Gems","Firestorm":"Skill Gems","Flame Surge":"Skill Gems","Flame Wall":"Skill Gems","Flameblast":"Skill Gems","Forbidden Rite":"Skill Gems","Freezing Pulse":"Skill Gems","Frost Bomb":"Skill Gems","Frostbolt":"Skill Gems","Galvanic Field":"Skill Gems","Glacial Cascade":"Skill Gems","Hydrosphere":"Skill Gems","Ice Nova":"Skill Gems","Ice Spear":"Skill Gems","Icicle Mine":"Skill Gems","Incinerate":"Skill Gems","Kinetic Blast":"Skill Gems","Kinetic Bolt":"Skill Gems","Lightning Conduit":"Skill Gems","Lightning Spire Trap":"Skill Gems","Lightning Tendrils":"Skill Gems","Lightning Trap":"Skill Gems","Manabond":"Skill Gems","Orb of Storms":"Skill Gems","Penance Brand":"Skill Gems","Power Siphon":"Skill Gems","Purifying Flame":"Skill Gems","Pyroclast Mine":"Skill Gems","Raise Spectre":"Skill Gems","Raise Zombie":"Skill Gems","Righteous Fire":"Skill Gems","Rolling Magma":"Skill Gems","Scorching Ray":"Skill Gems","Shock Nova":"Skill Gems","Soulrend":"Skill Gems","Spark":"Skill Gems","Spellslinger":"Utility Gems","Storm Brand":"Skill Gems","Storm Burst":"Skill Gems","Storm Call":"Skill Gems","Stormbind":"Skill Gems","Stormblast Mine":"Skill Gems","Summon Carrion Golem":"Skill Gems","Summon Chaos Golem":"Skill Gems","Summon Lightning Golem":"Skill Gems","Summon Raging Spirit":"Skill Gems","Summon Reaper":"Skill Gems","Summon Skeletons":"Skill Gems","Summon Skitterbots":"Skill Gems","Void Sphere":"Skill Gems","Voltaxic Burst":"Skill Gems","Vortex":"Skill Gems","Wave of Conviction":"Skill Gems","Winter Orb":"Skill Gems","Wintertide Brand":"Skill Gems","Absolution":"Skill Gems","Ancestral Protector":"Skill Gems","Ancestral Warchief":"Skill Gems","Animate Guardian":"Skill Gems","Bladestorm":"Skill Gems","Boneshatter":"Skill Gems","Chain Hook":"Skill Gems","Cleave":"Skill Gems","Consecrated Path":"Skill Gems","Dominating Blow":"Skill Gems","Earthquake":"Skill Gems","Earthshatter":"Skill Gems","Exsanguinate":"Skill Gems","Frozen Legion":"Skill Gems","Glacial Hammer":"Skill Gems","Ground Slam":"Skill Gems","Heavy Strike":"Skill Gems","Holy Flame Totem":"Skill Gems","Ice Crash":"Skill Gems","Infernal Blow":"Skill Gems","Infernal Cry":"Skill Gems","Molten Strike":"Skill Gems","Perforate":"Skill Gems","Rage Vortex":"Skill Gems","Reap":"Skill Gems","Searing Bond":"Skill Gems","Shield Crush":"Skill Gems","Shockwave Totem":"Skill Gems","Smite":"Skill Gems","Static Strike":"Skill Gems","Summon Flame Golem":"Skill Gems","Summon Stone Golem":"Skill Gems","Sunder":"Skill Gems","Holy Sweep":"Skill Gems","Tectonic Slam":"Skill Gems","Vigilant Strike":"Skill Gems","Volcanic Fissure":"Skill Gems","Blink Arrow":"Skill Gems","Mirror Arrow":"Skill Gems","Alchemist's Mark":"Utility Gems","Ambush":"Utility Gems","Autoexertion":"Utility Gems","Automation":"Utility Gems","Arctic Armour":"Utility Gems","Blood Rage":"Utility Gems","Dash":"Utility Gems","Desecrate":"Utility Gems","Grace":"Utility Gems","Haste":"Utility Gems","Hatred":"Utility Gems","Herald of Agony":"Utility Gems","Herald of Ice":"Utility Gems","Intuitive Link":"Utility Gems","Phase Run":"Utility Gems","Plague Bearer":"Utility Gems","Poacher's Mark":"Utility Gems","Precision":"Utility Gems","Purity of Ice":"Utility Gems","Smoke Mine":"Utility Gems","Sniper's Mark":"Utility Gems","Summon Ice Golem":"Utility Gems","Temporal Chains":"Utility Gems","Temporal Rift":"Utility Gems","Vampiric Link":"Utility Gems","Withering Step":"Utility Gems","Arcane Cloak":"Utility Gems","Assassin's Mark":"Utility Gems","Brand Recall":"Utility Gems","Clarity":"Utility Gems","Conductivity":"Utility Gems","Convocation":"Utility Gems","Dark Pact":"Utility Gems","Despair":"Utility Gems","Destructive Link":"Utility Gems","Discharge":"Utility Gems","Discipline":"Utility Gems","Elemental Weakness":"Utility Gems","Enfeeble":"Utility Gems","Flame Dash":"Utility Gems","Flammability":"Utility Gems","Flesh Offering":"Utility Gems","Frost Shield":"Utility Gems","Frost Wall":"Utility Gems","Frostbite":"Utility Gems","Frostblink":"Utility Gems","Herald of Thunder":"Utility Gems","Hexblast":"Utility Gems","Lightning Warp":"Utility Gems","Malevolence":"Utility Gems","Purity of Elements":"Utility Gems","Purity of Lightning":"Utility Gems","Sigil of Power":"Utility Gems","Siphoning Trap":"Utility Gems","Soul Link":"Utility Gems","Spirit Offering":"Utility Gems","Summon Holy Relic":"Utility Gems","Tempest Shield":"Utility Gems","Wrath":"Utility Gems","Zealotry":"Utility Gems","Detonate Mines":"Utility Gems","Ancestral Cry":"Utility Gems","Anger":"Utility Gems","Battlemage's Cry":"Utility Gems","Berserk":"Utility Gems","Blood and Sand":"Utility Gems","Corrupting Fever":"Utility Gems","Decoy Totem":"Utility Gems","Defiance Banner":"Utility Gems","Determination":"Utility Gems","Devouring Totem":"Utility Gems","Dread Banner":"Utility Gems","Enduring Cry":"Utility Gems","Flame Link":"Utility Gems","Flesh and Stone":"Utility Gems","General's Cry":"Utility Gems","Herald of Ash":"Utility Gems","Herald of Purity":"Utility Gems","Immortal Call":"Utility Gems","Intimidating Cry":"Utility Gems","Leap Slam":"Utility Gems","Molten Shell":"Utility Gems","Petrified Blood":"Utility Gems","Pride":"Utility Gems","Protective Link":"Utility Gems","Punishment":"Utility Gems","Purity of Fire":"Utility Gems","Rallying Cry":"Utility Gems","Rejuvenation Totem":"Utility Gems","Seismic Cry":"Utility Gems","Shield Charge":"Utility Gems","Steelskin":"Utility Gems","Vitality":"Utility Gems","Vulnerability":"Utility Gems","War Banner":"Utility Gems","Warlord's Mark":"Utility Gems","Chance to Bleed Support":"Support Gems","Ruthless Support":"Support Gems","Ancestral Call Support":"Support Gems","Added Fire Damage Support":"Support Gems","Ballista Totem Support":"Support Gems","Flamewood Support":"Support Gems","Knockback Support":"Support Gems","Life Gain on Hit Support":"Support Gems","Lifetap Support":"Support Gems","Maim Support":"Support Gems","Melee Splash Support":"Support Gems","Spell Totem Support":"Support Gems","Stun Support":"Support Gems","Bloodlust Support":"Support Gems","Cold to Fire Support":"Support Gems","Cruelty Support":"Support Gems","Damage on Full Life Support":"Support Gems","Elemental Damage with Attacks Support":"Support Gems","Endurance Charge on Melee Stun Support":"Support Gems","Iron Grip Support":"Support Gems","Iron Will Support":"Support Gems","Melee Physical Damage Support":"Support Gems","Rage Support":"Support Gems","Sacred Wisps Support":"Support Gems","Shockwave Support":"Support Gems","Volatility Support":"Support Gems","Arrogance Support":"Support Gems","Bloodthirst Support":"Support Gems","Burning Damage Support":"Support Gems","Controlled Blaze Support":"Support Gems","Corrupting Cry Support":"Support Gems","Fire Penetration Support":"Support Gems","Fortify Support":"Support Gems","Generosity Support":"Support Gems","Guardian's Blessing Support":"Support Gems","More Duration Support":"Support Gems","Inspiration Support":"Support Gems","Less Duration Support":"Support Gems","Life Leech Support":"Support Gems","Pulverise Support":"Support Gems","Urgent Orders Support":"Support Gems","Behead Support":"Support Gems","Brutality Support":"Support Gems","Cast on Melee Kill Support":"Support Gems","Cast when Damage Taken Support":"Support Gems","Eternal Blessing Support":"Support Gems","Fist of War Support":"Support Gems","Multiple Totems Support":"Support Gems","Multistrike Support":"Support Gems","Trauma Support":"Support Gems","Chance to Poison Support":"Support Gems","Momentum Support":"Support Gems","Mirage Archer Support":"Support Gems","Pierce Support":"Support Gems","Swift Assembly Support":"Support Gems","Volley Support":"Support Gems","Added Cold Damage Support":"Support Gems","Additional Accuracy Support":"Support Gems","Arrow Nova Support":"Support Gems","Blind Support":"Support Gems","Chance to Flee Support":"Support Gems","Faster Attacks Support":"Support Gems","Multiple Projectiles Support":"Support Gems","Locus Mine Support":"Support Gems","Manaforged Arrows Support":"Support Gems","Multiple Traps Support":"Support Gems","Trap Support":"Support Gems","Void Manipulation Support":"Support Gems","Block Chance Reduction Support":"Support Gems","Close Combat Support":"Support Gems","Culling Strike Support":"Support Gems","Deadly Ailments Support":"Support Gems","Nightblade Support":"Support Gems","Point Blank Support":"Support Gems","Sadism Support":"Support Gems","Trap and Mine Damage Support":"Support Gems","Vicious Projectiles Support":"Support Gems","Advanced Traps Support":"Support Gems","Charged Traps Support":"Support Gems","Cold Penetration Support":"Support Gems","Critical Strike Affliction Support":"Support Gems","Faster Projectiles Support":"Support Gems","Focused Ballista Support":"Support Gems","Fork Support":"Support Gems","Hypothermia Support":"Support Gems","Ice Bite Support":"Support Gems","Impale Support":"Support Gems","Mana Leech Support":"Support Gems","Second Wind Support":"Support Gems","Slower Projectiles Support":"Support Gems","Swift Affliction Support":"Support Gems","Barrage Support":"Support Gems","Cast On Critical Strike Support":"Support Gems","Cast on Death Support":"Support Gems","Chain Support":"Support Gems","Cluster Traps Support":"Support Gems","Greater Multiple Projectiles Support":"Support Gems","Greater Volley Support":"Support Gems","Mark On Hit Support":"Support Gems","Returning Projectiles Support":"Support Gems","Vile Toxins Support":"Support Gems","Withering Touch Support":"Support Gems","Added Chaos Damage Support":"Support Gems","Added Lightning Damage Support":"Support Gems","Arcane Surge Support":"Support Gems","Archmage Support":"Support Gems","Blasphemy Support":"Support Gems","Blastchain Mine Support":"Support Gems","Bonechill Support":"Support Gems","Cast when Stunned Support":"Support Gems","Cast while Channelling Support":"Support Gems","Charged Mines Support":"Support Gems","Combustion Support":"Support Gems","Concentrated Effect Support":"Support Gems","Controlled Destruction Support":"Support Gems","Cursed Ground Support":"Support Gems","Decay Support":"Support Gems","Devour Support":"Support Gems","Efficacy Support":"Support Gems","Elemental Army Support":"Support Gems","Elemental Focus Support":"Support Gems","Elemental Penetration Support":"Support Gems","Elemental Proliferation Support":"Support Gems","Energy Leech Support":"Support Gems","Faster Casting Support":"Support Gems","Feeding Frenzy Support":"Support Gems","Fresh Meat Support":"Support Gems","Frigid Bond Support":"Support Gems","Hex Bloom Support":"Support Gems","Hextouch Support":"Support Gems","High-Impact Mine Support":"Support Gems","Ignite Proliferation Support":"Support Gems","Immolate Support":"Support Gems","Impending Doom Support":"Support Gems","Increased Area of Effect Support":"Support Gems","Increased Critical Damage Support":"Support Gems","Increased Critical Strikes Support":"Support Gems","Infernal Legion Support":"Support Gems","Infused Channelling Support":"Support Gems","Innervate Support":"Support Gems","Intensify Support":"Support Gems","Item Rarity Support":"Support Gems","Lightning Penetration Support":"Support Gems","Meat Shield Support":"Support Gems","Minefield Support":"Support Gems","Minion Damage Support":"Support Gems","Minion Life Support":"Support Gems","Minion Speed Support":"Support Gems","Overcharge Support":"Support Gems","Physical to Lightning Support":"Support Gems","Pinpoint Support":"Support Gems","Power Charge On Critical Support":"Support Gems","Predator Support":"Support Gems","Prismatic Burst Support":"Support Gems","Sacrifice Support":"Support Gems","Spell Cascade Support":"Support Gems","Spell Echo Support":"Support Gems","Spellblade Support":"Support Gems","Summon Phantasm Support":"Support Gems","Swiftbrand Support":"Support Gems","Trinity Support":"Support Gems","Unbound Ailments Support":"Support Gems","Unleash Support":"Support Gems","Crushing Fist":"Skill Gems","Eviscerate":"Skill Gems","Swordstorm":"Skill Gems","Glacial Shield Swipe":"Skill Gems","Divine Retribution":"Skill Gems","Vengeful Cry":"Utility Gems","Focused Channelling Support":"Support Gems","Overexertion Support":"Support Gems","Expert Retaliation Support":"Support Gems","Rupture Support":"Support Gems","Conflagration":"Skill Gems","Thunderstorm":"Skill Gems","Somatic Shell":"Skill Gems","Kinetic Fusillade":"Skill Gems","Kinetic Rain":"Skill Gems","Wall of Force":"Skill Gems","Windburst Support":"Skill Gems","Living Lightning Support":"Skill Gems","Wither":"Utility Gems","Divine Blast":"Skill Gems","Holy Hammers":"Skill Gems","Holy Strike":"Skill Gems","Shield of Light":"Utility Gems","Blessed Call Support":"Support Gems","Excommunicate Support":"Support Gems","Exemplar Support":"Support Gems","Hallow Support":"Support Gems","Portal":"Utility Gems","Enhance Support":"Support Gems","Empower Support":"Support Gems","Enlighten Support":"Support Gems","Reliquarian":"Ascendancies"};
+
+const GEM_LEVEL_REQ = {"Animate Weapon":4,"Artillery Ballista":28,"Barrage":12,"Bear Trap":4,"Blade Blast":16,"Blade Flurry":28,"Blade Trap":12,"Blade Vortex":12,"Bladefall":28,"Blast Rain":28,"Burning Arrow":1,"Caustic Arrow":1,"Charged Dash":28,"Cobra Lash":1,"Cremation":28,"Cyclone":28,"Detonate Dead":4,"Double Strike":1,"Dual Strike":1,"Elemental Hit":12,"Ensnaring Arrow":16,"Ethereal Knives":1,"Explosive Arrow":28,"Explosive Concoction":28,"Explosive Trap":1,"Fire Trap":12,"Flamethrower Trap":28,"Flicker Strike":10,"Frenzy":16,"Frost Blades":1,"Galvanic Arrow":1,"Ice Shot":1,"Ice Trap":28,"Lacerate":12,"Lancing Steel":28,"Lightning Arrow":12,"Lightning Strike":12,"Pestilent Strike":28,"Poisonous Concoction":12,"Puncture":4,"Rain of Arrows":12,"Reave":12,"Scourge Arrow":28,"Seismic Trap":28,"Shattering Steel":12,"Shrapnel Ballista":4,"Siege Ballista":12,"Snipe":34,"Spectral Helix":12,"Spectral Shield Throw":28,"Spectral Throw":1,"Split Arrow":1,"Splitting Steel":1,"Storm Rain":28,"Tornado":34,"Tornado Shot":28,"Toxic Rain":12,"Unearth":10,"Venom Gyre":12,"Viper Strike":1,"Volatile Dead":12,"Whirling Blades":10,"Wild Strike":28,"Arc":12,"Arcanist Brand":38,"Armageddon Brand":28,"Ball Lightning":28,"Bane":24,"Blazing Salvo":12,"Blight":1,"Bodyswap":10,"Bone Offering":12,"Cold Snap":16,"Contagion":4,"Conversion Trap":4,"Crackling Lance":28,"Creeping Frost":12,"Divine Ire":28,"Energy Blade":24,"Essence Drain":12,"Eye of Winter":28,"Fireball":1,"Firestorm":28,"Flame Surge":12,"Flame Wall":4,"Flameblast":28,"Forbidden Rite":16,"Freezing Pulse":1,"Frost Bomb":4,"Frostbolt":1,"Galvanic Field":16,"Glacial Cascade":28,"Hydrosphere":34,"Ice Nova":12,"Ice Spear":12,"Icicle Mine":12,"Incinerate":12,"Kinetic Blast":28,"Kinetic Bolt":1,"Lightning Conduit":28,"Lightning Spire Trap":28,"Lightning Tendrils":1,"Lightning Trap":12,"Manabond":12,"Orb of Storms":4,"Penance Brand":28,"Power Siphon":12,"Purifying Flame":1,"Pyroclast Mine":28,"Raise Spectre":28,"Raise Zombie":1,"Righteous Fire":16,"Rolling Magma":1,"Scorching Ray":12,"Shock Nova":28,"Soulrend":28,"Spark":1,"Spellslinger":24,"Storm Brand":12,"Storm Burst":12,"Storm Call":12,"Stormbind":28,"Stormblast Mine":1,"Summon Carrion Golem":34,"Summon Chaos Golem":34,"Summon Lightning Golem":34,"Summon Raging Spirit":4,"Summon Reaper":28,"Summon Skeletons":10,"Summon Skitterbots":16,"Void Sphere":34,"Voltaxic Burst":12,"Vortex":28,"Wave of Conviction":16,"Winter Orb":28,"Wintertide Brand":12,"Absolution":12,"Ancestral Protector":4,"Ancestral Warchief":28,"Animate Guardian":28,"Bladestorm":28,"Boneshatter":28,"Chain Hook":12,"Cleave":1,"Consecrated Path":28,"Dominating Blow":28,"Earthquake":28,"Earthshatter":12,"Exsanguinate":12,"Frozen Legion":34,"Glacial Hammer":1,"Ground Slam":1,"Heavy Strike":1,"Holy Flame Totem":4,"Ice Crash":28,"Infernal Blow":12,"Infernal Cry":24,"Molten Strike":1,"Perforate":1,"Rage Vortex":28,"Reap":28,"Searing Bond":12,"Shield Crush":1,"Shockwave Totem":28,"Smite":1,"Static Strike":12,"Summon Flame Golem":34,"Summon Stone Golem":34,"Sunder":12,"Holy Sweep":12,"Tectonic Slam":28,"Vigilant Strike":4,"Volcanic Fissure":12,"Blink Arrow":10,"Mirror Arrow":10,"Alchemist's Mark":24,"Ambush":34,"Autoexertion":24,"Automation":24,"Arctic Armour":16,"Blood Rage":16,"Dash":4,"Desecrate":16,"Grace":24,"Haste":24,"Hatred":24,"Herald of Agony":16,"Herald of Ice":16,"Intuitive Link":34,"Phase Run":34,"Plague Bearer":24,"Poacher's Mark":16,"Precision":10,"Purity of Ice":24,"Smoke Mine":10,"Sniper's Mark":4,"Summon Ice Golem":34,"Temporal Chains":24,"Temporal Rift":34,"Vampiric Link":34,"Withering Step":10,"Arcane Cloak":16,"Assassin's Mark":16,"Brand Recall":16,"Clarity":10,"Conductivity":24,"Convocation":24,"Dark Pact":28,"Despair":24,"Destructive Link":34,"Discharge":28,"Discipline":24,"Elemental Weakness":24,"Enfeeble":24,"Flame Dash":10,"Flammability":24,"Flesh Offering":12,"Frost Shield":34,"Frost Wall":4,"Frostbite":24,"Frostblink":4,"Herald of Thunder":16,"Hexblast":28,"Lightning Warp":10,"Malevolence":24,"Purity of Elements":24,"Purity of Lightning":24,"Sigil of Power":34,"Siphoning Trap":10,"Soul Link":34,"Spirit Offering":12,"Summon Holy Relic":4,"Tempest Shield":16,"Wrath":24,"Zealotry":24,"Detonate Mines":8,"Ancestral Cry":16,"Anger":24,"Battlemage's Cry":24,"Berserk":34,"Blood and Sand":4,"Corrupting Fever":16,"Decoy Totem":4,"Defiance Banner":16,"Determination":24,"Devouring Totem":4,"Dread Banner":24,"Enduring Cry":10,"Flame Link":34,"Flesh and Stone":16,"General's Cry":24,"Herald of Ash":16,"Herald of Purity":16,"Immortal Call":34,"Intimidating Cry":10,"Leap Slam":10,"Molten Shell":4,"Petrified Blood":24,"Pride":24,"Protective Link":34,"Punishment":24,"Purity of Fire":24,"Rallying Cry":24,"Rejuvenation Totem":4,"Seismic Cry":16,"Shield Charge":10,"Steelskin":4,"Vitality":10,"Vulnerability":24,"War Banner":4,"Warlord's Mark":16,"Chance to Bleed Support":1,"Ruthless Support":1,"Ancestral Call Support":4,"Added Fire Damage Support":8,"Ballista Totem Support":8,"Flamewood Support":8,"Knockback Support":8,"Life Gain on Hit Support":8,"Lifetap Support":8,"Maim Support":8,"Melee Splash Support":8,"Spell Totem Support":8,"Stun Support":8,"Bloodlust Support":18,"Cold to Fire Support":18,"Cruelty Support":18,"Damage on Full Life Support":18,"Elemental Damage with Attacks Support":18,"Endurance Charge on Melee Stun Support":18,"Iron Grip Support":18,"Iron Will Support":18,"Melee Physical Damage Support":18,"Rage Support":18,"Sacred Wisps Support":18,"Shockwave Support":18,"Volatility Support":18,"Arrogance Support":31,"Bloodthirst Support":31,"Burning Damage Support":31,"Controlled Blaze Support":31,"Corrupting Cry Support":31,"Fire Penetration Support":31,"Fortify Support":31,"Generosity Support":31,"Guardian's Blessing Support":31,"More Duration Support":31,"Inspiration Support":31,"Less Duration Support":31,"Life Leech Support":31,"Pulverise Support":31,"Urgent Orders Support":31,"Behead Support":38,"Brutality Support":38,"Cast on Melee Kill Support":38,"Cast when Damage Taken Support":38,"Eternal Blessing Support":38,"Fist of War Support":38,"Multiple Totems Support":38,"Multistrike Support":38,"Trauma Support":38,"Chance to Poison Support":1,"Momentum Support":1,"Mirage Archer Support":4,"Pierce Support":4,"Swift Assembly Support":4,"Volley Support":4,"Added Cold Damage Support":8,"Additional Accuracy Support":8,"Arrow Nova Support":8,"Blind Support":8,"Chance to Flee Support":8,"Faster Attacks Support":8,"Multiple Projectiles Support":8,"Locus Mine Support":8,"Manaforged Arrows Support":8,"Multiple Traps Support":8,"Trap Support":8,"Void Manipulation Support":8,"Block Chance Reduction Support":18,"Close Combat Support":18,"Culling Strike Support":18,"Deadly Ailments Support":18,"Nightblade Support":18,"Point Blank Support":18,"Sadism Support":18,"Trap and Mine Damage Support":18,"Vicious Projectiles Support":18,"Advanced Traps Support":31,"Charged Traps Support":31,"Cold Penetration Support":31,"Critical Strike Affliction Support":31,"Faster Projectiles Support":31,"Focused Ballista Support":31,"Fork Support":31,"Hypothermia Support":31,"Ice Bite Support":31,"Impale Support":31,"Mana Leech Support":31,"Second Wind Support":31,"Slower Projectiles Support":31,"Swift Affliction Support":31,"Barrage Support":38,"Cast On Critical Strike Support":38,"Cast on Death Support":38,"Chain Support":38,"Cluster Traps Support":38,"Greater Multiple Projectiles Support":38,"Greater Volley Support":38,"Mark On Hit Support":38,"Returning Projectiles Support":38,"Vile Toxins Support":38,"Withering Touch Support":38,"Added Chaos Damage Support":31,"Added Lightning Damage Support":8,"Arcane Surge Support":1,"Archmage Support":31,"Blasphemy Support":31,"Blastchain Mine Support":8,"Bonechill Support":38,"Cast when Stunned Support":38,"Cast while Channelling Support":38,"Charged Mines Support":31,"Combustion Support":8,"Concentrated Effect Support":18,"Controlled Destruction Support":18,"Cursed Ground Support":31,"Decay Support":38,"Devour Support":8,"Efficacy Support":8,"Elemental Army Support":31,"Elemental Focus Support":18,"Elemental Penetration Support":31,"Elemental Proliferation Support":1,"Energy Leech Support":31,"Faster Casting Support":18,"Feeding Frenzy Support":31,"Fresh Meat Support":18,"Frigid Bond Support":38,"Hex Bloom Support":38,"Hextouch Support":38,"High-Impact Mine Support":31,"Ignite Proliferation Support":38,"Immolate Support":38,"Impending Doom Support":31,"Increased Area of Effect Support":38,"Increased Critical Damage Support":18,"Increased Critical Strikes Support":8,"Infernal Legion Support":8,"Infused Channelling Support":4,"Innervate Support":31,"Intensify Support":31,"Item Rarity Support":31,"Lightning Penetration Support":31,"Meat Shield Support":31,"Minefield Support":38,"Minion Damage Support":8,"Minion Life Support":18,"Minion Speed Support":18,"Overcharge Support":18,"Physical to Lightning Support":18,"Pinpoint Support":31,"Power Charge On Critical Support":18,"Predator Support":18,"Prismatic Burst Support":1,"Sacrifice Support":31,"Spell Cascade Support":4,"Spell Echo Support":38,"Spellblade Support":38,"Summon Phantasm Support":4,"Swiftbrand Support":31,"Trinity Support":18,"Unbound Ailments Support":8,"Unleash Support":38,"Crushing Fist":4,"Eviscerate":6,"Swordstorm":6,"Glacial Shield Swipe":6,"Divine Retribution":6,"Vengeful Cry":24,"Focused Channelling Support":31,"Overexertion Support":38,"Expert Retaliation Support":31,"Rupture Support":38,"Conflagration":28,"Thunderstorm":28,"Somatic Shell":28,"Kinetic Fusillade":12,"Kinetic Rain":28,"Wall of Force":16,"Windburst Support":31,"Living Lightning Support":18,"Wither":10,"Divine Blast":28,"Holy Hammers":28,"Holy Strike":1,"Shield of Light":16,"Blessed Call Support":31,"Excommunicate Support":31,"Exemplar Support":18,"Hallow Support":1,"Portal":10,"Enhance Support":60,"Empower Support":60,"Enlighten Support":60};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let client = null;
+let connected = false;
+let gemSort = 'alpha';
+const itemsCollapsed = new Set();
+const locsExpanded   = new Set(); // acts the user has manually opened
+
+window.toggleItemSection = function toggleItemSection(header) {
+  header.classList.toggle('collapsed');
+  const key = header.querySelector('h3')?.textContent;
+  if (key) {
+    if (header.classList.contains('collapsed')) itemsCollapsed.add(key);
+    else itemsCollapsed.delete(key);
+  }
+};
+
+window.toggleActSection = function toggleActSection(header) {
+  header.classList.toggle('collapsed');
+  const key = header.querySelector('h3')?.textContent;
+  if (key) {
+    if (header.classList.contains('collapsed')) locsExpanded.delete(key);
+    else locsExpanded.add(key);
+  }
+};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const IMG_BASE = 'PathOfExilePoptracker/images/items/';
+function itemImageUrl(name) {
+  const key = name.toLowerCase().replace(/\s+/g, '');
+  return `${IMG_BASE}${key}.png`;
+}
+
+function categorizeItem(name) {
+  if (POE_ITEMS[name]) return POE_ITEMS[name];
+  if (name.endsWith(' Support')) return 'Support Gems';
+  if (/flask/i.test(name)) return 'Flasks';
+  return 'Other';
+}
+
+function categorizeItemClass(cat) {
+  return {
+    'Skill Gems':    'gem',
+    'Support Gems':  'support',
+    'Utility Gems':  'util',
+    'Flasks':        'flask',
+    'Classes':       'class',
+    'Ascendancies':  'class',
+    'Weapons':       'weapon',
+    'Armour':        'armour',
+  }[cat] || '';
+}
+
+function actLabel(act) {
+  if (act === 'level') return 'Level Milestones';
+  if (act === '0_boss') return 'Endgame Bosses';
+  if (typeof act === 'string' && act.endsWith('_boss')) return `Act ${act.replace('_boss','')} Bosses`;
+  if (act === 0 || act === 0.2) return 'Twilight Strand';
+  if (act >= 1 && act <= 10) return `Act ${act}`;
+  if (act === 11) return 'Maps / Endgame';
+  return 'Other';
+}
+
+function actSortKey(act) {
+  if (act === 0 || act === 0.2) return -1;
+  if (act === 'level') return 99;
+  if (act === '0_boss') return 12;
+  if (typeof act === 'string' && act.endsWith('_boss')) return parseFloat(act) + 0.5;
+  return Number(act);
+}
+
+function ts() {
+  const d = new Date();
+  return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+}
+
+function addMessage(text, cls) {
+  const feed = document.getElementById('messages-feed');
+  const line = document.createElement('div');
+  line.className = 'msg-line';
+  line.innerHTML = `<span class="msg-time">${ts()}</span><span class="${cls}">${text}</span>`;
+  feed.appendChild(line);
+  if (feed.children.length > 120) feed.removeChild(feed.firstChild);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+// ── UI Controls ───────────────────────────────────────────────────────────────
+const statusDot  = document.getElementById('status-dot');
+const statusText = document.getElementById('status-text');
+const connectPanel = document.getElementById('connect-panel');
+const connectError = document.getElementById('connect-error');
+const btnConnect    = document.getElementById('btn-connect');
+const btnReconnect  = document.getElementById('btn-reconnect');
+const overviewConnected = document.getElementById('overview-connected');
+const disconnectedMsg   = document.getElementById('disconnected-msg');
+
+function setStatus(state, text) {
+  statusDot.className = state === 'connected' ? 'connected' : state === 'connecting' ? 'connecting' : '';
+  statusText.textContent = text;
+}
+
+function showConnected(serverUrl, name, game, team) {
+  connected = true;
+  setStatus('connected', `${name} @ ${serverUrl}`);
+  connectPanel.classList.add('hidden');
+  btnReconnect.textContent = 'Reconnect';
+  overviewConnected.style.display = '';
+  disconnectedMsg.style.display = 'none';
+  document.getElementById('si-player').textContent = name;
+  document.getElementById('si-game').textContent = game;
+  document.getElementById('si-server').textContent = serverUrl;
+  document.getElementById('si-team').textContent = team !== undefined ? `Team ${team}` : '—';
+  connectError.textContent = '';
+  addMessage(`Connected as "${name}" to ${serverUrl}`, 'msg-system');
+}
+
+function showDisconnected(reason) {
+  connected = false;
+  setStatus('', 'Disconnected');
+  btnReconnect.textContent = 'Connect';
+  if (reason) connectError.textContent = reason;
+}
+
+// ── Gem sort ─────────────────────────────────────────────────────────────────
+document.querySelectorAll('.sort-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    gemSort = btn.dataset.sort;
+    document.querySelectorAll('.sort-btn').forEach(b => b.classList.toggle('active', b === btn));
+    if (client) renderItems(client.items.received);
+  });
+});
+
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+btnReconnect.addEventListener('click', () => {
+  connectPanel.classList.toggle('hidden');
+});
+
+// ── Class layout (base class → ascendancies) ──────────────────────────────────
+const CLASS_TREE = [
+  { base: 'Scion',    asc: ['Ascendant','Reliquarian'] },
+  { base: 'Marauder', asc: ['Berserker','Chieftain','Juggernaut'] },
+  { base: 'Duelist',  asc: ['Champion','Gladiator','Slayer'] },
+  { base: 'Ranger',   asc: ['Deadeye','Pathfinder','Warden'] },
+  { base: 'Shadow',   asc: ['Assassin','Saboteur','Trickster'] },
+  { base: 'Witch',    asc: ['Elementalist','Necromancer','Occultist'] },
+  { base: 'Templar',  asc: ['Guardian','Hierophant','Inquisitor'] },
+];
+
+// ── Items Rendering ───────────────────────────────────────────────────────────
+function renderItems(receivedItems) {
+  const grouped = {};
+  for (const item of receivedItems) {
+    const cat = categorizeItem(item.name);
+    if (!grouped[cat]) grouped[cat] = {};
+    grouped[cat][item.name] = (grouped[cat][item.name] || 0) + 1;
+  }
+
+  const GEM_CATS = new Set(['Skill Gems','Support Gems','Utility Gems']);
+  const CAT_ORDER = ['Skill Gems','Support Gems','Utility Gems','Flasks','Weapons','Armour','Progression','Other'];
+  const content = document.getElementById('items-content');
+  const empty   = document.getElementById('items-empty');
+  const sortBar = document.getElementById('items-sort-bar');
+  const total   = receivedItems.length;
+
+  document.getElementById('badge-items').textContent = total;
+  document.getElementById('stat-items').textContent  = total;
+
+  if (total === 0) {
+    empty.style.display = '';
+    sortBar.style.display = 'none';
+    content.innerHTML = '';
+    return;
+  }
+  empty.style.display = 'none';
+  sortBar.style.display = '';
+
+  const receivedNames = new Set(receivedItems.map(i => i.name));
+  let html = '';
+
+  // ── Classes & Ascendancies (always at top) ───────────────────────────────
+  const classCount = CLASS_TREE.filter(r => receivedNames.has(r.base)).length;
+  const allAsc     = CLASS_TREE.flatMap(r => r.asc);
+  const ascCount   = allAsc.filter(a => receivedNames.has(a)).length;
+  const totalClass = CLASS_TREE.length + allAsc.length;
+  const gotClass   = classCount + ascCount;
+
+  html += `<div class="class-section-header" onclick="toggleItemSection(this)">
+    <span class="collapse-icon">▾</span>
+    <h3>Classes &amp; Ascendancies</h3>
+    <span class="cat-count">${gotClass} / ${totalClass}</span>
+  </div>
+  <div class="class-rows">`;
+
+  for (const { base, asc } of CLASS_TREE) {
+    const baseGot = receivedNames.has(base);
+    html += `<div class="class-row">
+      <div class="class-card base${baseGot?' received':''}">
+        <img src="${itemImageUrl(base)}" alt="" onerror="this.style.display='none'">
+        <span>${base}</span>
+      </div>`;
+    for (const a of asc) {
+      const got = receivedNames.has(a);
+      html += `<div class="class-card asc${got?' received':''}">
+        <img src="${itemImageUrl(a)}" alt="" onerror="this.style.display='none'">
+        <span>${a}</span>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+  html += `</div>`;
+
+  // ── Gem & other categories ───────────────────────────────────────────────
+  const catsPresent = CAT_ORDER.filter(c => grouped[c]);
+  for (const cat of catsPresent) {
+    const isGem = GEM_CATS.has(cat);
+    const entries = Object.entries(grouped[cat]);
+
+    if (isGem && gemSort === 'level') {
+      entries.sort((a, b) => {
+        const la = GEM_LEVEL_REQ[a[0]] ?? 999;
+        const lb = GEM_LEVEL_REQ[b[0]] ?? 999;
+        return la !== lb ? la - lb : a[0].localeCompare(b[0]);
+      });
+    } else {
+      entries.sort((a, b) => a[0].localeCompare(b[0]));
+    }
+
+    const cls = categorizeItemClass(cat);
+    html += `<div class="cat-section">
+      <div class="cat-header" onclick="toggleItemSection(this)">
+        <span class="collapse-icon">▾</span>
+        <h3>${cat}</h3>
+        <span class="cat-count">${entries.length} types · ${entries.reduce((s,[,c])=>s+c,0)} total</span>
+      </div>
+      <div class="cat-body">`;
+    for (const [name, count] of entries) {
+      const lvl    = isGem && gemSort === 'level' ? (GEM_LEVEL_REQ[name] != null ? `<span class="item-level">L${GEM_LEVEL_REQ[name]}</span>` : '') : '';
+      const imgSrc = itemImageUrl(name);
+      html += `<span class="item-tag ${cls}"><img class="item-img" src="${imgSrc}" alt="" onerror="this.style.display='none'">${name}${lvl}${count > 1 ? `<span class="item-count">×${count}</span>` : ''}</span>`;
+    }
+    html += `</div></div>`;
+  }
+
+  content.innerHTML = html;
+  if (itemsCollapsed.size) {
+    content.querySelectorAll('.cat-header, .class-section-header').forEach(el => {
+      if (itemsCollapsed.has(el.querySelector('h3')?.textContent)) el.classList.add('collapsed');
+    });
+  }
+}
+
+// ── Locations Rendering ───────────────────────────────────────────────────────
+// Strip " - act N" / " - early act N" suffixes for display
+function locDisplayName(name) {
+  return name.replace(/\s*-\s*(early\s+)?act\s+\d+$/i, '');
+}
+
+function renderLocations(checked = new Set(), missing = null, locNames = null) {
+  const empty   = document.getElementById('locs-empty');
+  const content = document.getElementById('locations-content');
+  empty.style.display = 'none';
+
+  const byAct = {};
+
+  if (missing !== null && locNames !== null) {
+    // Connected: use full server location data
+    const checkedN = checked.size;
+    const total    = checked.size + missing.size;
+    document.getElementById('badge-locs').textContent       = `${checkedN}/${total}`;
+    document.getElementById('stat-locs-checked').textContent = checkedN;
+    document.getElementById('stat-locs-total').textContent   = `of ${total}`;
+
+    function addLoc(id, isDone) {
+      const name = locNames.get(id) || String(id);
+      const act  = POE_LOCATIONS[name] ?? 'Other';
+      if (!byAct[act]) byAct[act] = [];
+      byAct[act].push({ name, display: locDisplayName(name), checked: isDone });
+    }
+    for (const id of checked) addLoc(id, true);
+    for (const id of missing) addLoc(id, false);
+  } else {
+    // Not connected: build from static data, all locations unknown
+    const total = Object.keys(POE_LOCATIONS).length;
+    document.getElementById('badge-locs').textContent       = total;
+    document.getElementById('stat-locs-checked').textContent = '—';
+    document.getElementById('stat-locs-total').textContent   = `of ${total}`;
+
+    for (const name of Object.keys(POE_LOCATIONS)) {
+      const act = POE_LOCATIONS[name];
+      if (!byAct[act]) byAct[act] = [];
+      byAct[act].push({ name, display: locDisplayName(name), checked: null });
+    }
+  }
+
+  const acts = Object.keys(byAct).sort((a,b) => actSortKey(a) - actSortKey(b));
+  let html = '';
+  for (const act of acts) {
+    const locs     = byAct[act];
+    const total    = locs.length;
+    const doneN    = locs.filter(l => l.checked === true).length;
+    const pct      = total && doneN > 0 ? Math.round(doneN / total * 100) : 0;
+    const complete = doneN === total && total > 0 && locs[0].checked !== null;
+    const label    = actLabel(act);
+    html += `<div class="act-section">
+      <div class="act-header${locsExpanded.has(label) ? '' : ' collapsed'}" onclick="toggleActSection(this)">
+        <span class="act-toggle">▾</span>
+        <h3>${label}</h3>
+        <div class="act-bar-wrap"><div class="act-bar${complete?' complete':''}" style="width:${pct}%"></div></div>
+        <span class="act-progress">${locs[0].checked === null ? total : `${doneN} / ${total}`}</span>
+      </div>
+      <div class="act-locations">`;
+    const sorted = [...locs].sort((a,b) => a.display.localeCompare(b.display, undefined, { numeric: true }));
+    for (const { display, checked: isChecked } of sorted) {
+      const cls = isChecked === null ? 'unknown' : isChecked ? 'checked' : 'unchecked';
+      html += `<span class="loc-tag ${cls}">${display}</span>`;
+    }
+    html += `</div></div>`;
+  }
+  content.innerHTML = html;
+}
+
+// ── Hints Rendering ───────────────────────────────────────────────────────────
+function renderHints(hints) {
+  const count = hints.length;
+  document.getElementById('badge-hints').textContent = count;
+  document.getElementById('stat-hints').textContent  = count;
+  const found = hints.filter(h => h.found).length;
+  document.getElementById('stat-hints-found').textContent = found > 0 ? `${found} found` : '';
+
+  const empty = document.getElementById('hints-empty');
+  const wrap  = document.getElementById('hints-table-wrap');
+  const tbody = document.getElementById('hints-body');
+
+  if (count === 0) { empty.style.display = ''; wrap.style.display = 'none'; return; }
+  empty.style.display = 'none';
+  wrap.style.display  = '';
+
+  tbody.innerHTML = hints.map(h => `
+    <tr>
+      <td class="hint-item">${h.item?.name ?? '—'}</td>
+      <td class="hint-loc">${h.item?.locationName ?? '—'}</td>
+      <td class="hint-sender">${h.item?.sender?.alias ?? '—'}</td>
+      <td class="${h.found ? 'hint-found' : 'hint-notfound'}">${h.found ? '✓' : '—'}</td>
+    </tr>`).join('');
+}
+
+// ── Connection ────────────────────────────────────────────────────────────────
+async function connect() {
+  const server = document.getElementById('f-server').value.trim();
+  const slot   = document.getElementById('f-slot').value.trim();
+  const game   = 'Path of Exile';
+  const pass   = document.getElementById('f-pass').value;
+
+  if (!server || !slot) { connectError.textContent = 'Server and slot name are required.'; return; }
+
+  if (client) {
+    try { client.socket.disconnect(); } catch {}
+    client = null;
+  }
+
+  setStatus('connecting', `Connecting to ${server}…`);
+  connectError.textContent = '';
+  btnConnect.disabled = true;
+
+  client = new Client({ timeout: 30000 });
+
+  let url = server;
+  if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
+    const isLocal = /^(localhost|127\.|192\.168\.|10\.|::1)/i.test(url.split(':')[0]);
+    url = (isLocal ? 'ws://' : 'wss://') + url;
+  }
+  console.log('[AP] Connecting to:', url, 'slot:', slot, 'game:', game);
+
+  // Build location name map from DataPackage as it arrives (before login resolves)
+  const locNames = new Map();
+  client.socket.on('receivedPacket', (pkt) => {
+    if (pkt.cmd === 'DataPackage') {
+      const loc2id = pkt.data?.games?.[game]?.location_name_to_id;
+      if (loc2id) {
+        for (const [name, id] of Object.entries(loc2id)) {
+          locNames.set(id, name);
+        }
+      }
+    }
+  });
+
+  try {
+    const slotData = await client.login(url, slot, game, { password: pass || null, tags: ['AP', 'Tracker'] });
+
+    const me = client.players.self;
+    showConnected(server, slot, game, me?.team);
+
+    // ── initial render ──────────────────────────────────────────────────
+    function refresh() {
+      renderItems(client.items.received);
+      renderLocations(
+        new Set(client.room.checkedLocations),
+        new Set(client.room.missingLocations),
+        locNames
+      );
+      renderHints(client.items.hints);
+    }
+    refresh();
+
+    // ── events ──────────────────────────────────────────────────────────
+    client.items.on('itemsReceived', (items) => {
+      refresh();
+      for (const it of items) {
+        addMessage(`Received: ${it.name}${it.locationName ? ` from ${it.locationName}` : ''}`, 'msg-item');
+      }
+    });
+
+    client.room.on('locationsChecked', (ids) => {
+      refresh();
+      for (const id of ids) {
+        const name = locNames.get(id) || String(id);
+        addMessage(`Checked: ${name}`, 'msg-system');
+      }
+    });
+
+    client.items.on('hintsInitialized', () => {
+      refresh();
+    });
+
+    client.items.on('hintReceived', (hint) => {
+      refresh();
+      addMessage(`Hint: ${hint.item?.name ?? '?'} @ ${hint.item?.locationName ?? '?'}`, 'msg-hint');
+    });
+
+    client.messages.on('chat', (msg, player) => {
+      addMessage(`${player?.alias ?? '?'}: ${msg}`, 'msg-chat');
+    });
+
+    client.messages.on('serverChat', (msg) => {
+      addMessage(msg, 'msg-system');
+    });
+
+    client.socket.on('disconnected', () => {
+      showDisconnected('Disconnected from server.');
+      setStatus('', 'Disconnected');
+      renderLocations();
+    });
+
+  } catch (err) {
+    const msg = err?.message ?? String(err);
+    showDisconnected(msg);
+    setStatus('', 'Disconnected');
+    console.error('Connection failed', err);
+  } finally {
+    btnConnect.disabled = false;
+  }
+}
+
+btnConnect.addEventListener('click', connect);
+document.querySelectorAll('#connect-panel input').forEach(inp => {
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') connect(); });
+});
+
+// ── Restore saved settings ────────────────────────────────────────────────────
+const saved = JSON.parse(localStorage.getItem('apoe-tracker') || '{}');
+if (saved.server) document.getElementById('f-server').value = saved.server;
+if (saved.slot)   document.getElementById('f-slot').value   = saved.slot;
+
+btnConnect.addEventListener('click', () => {
+  localStorage.setItem('apoe-tracker', JSON.stringify({
+    server: document.getElementById('f-server').value.trim(),
+    slot:   document.getElementById('f-slot').value.trim(),
+  }));
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+renderLocations(); // show full static location list before any connection
+</script>
+
+</body>
+</html>
