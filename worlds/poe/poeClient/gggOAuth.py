@@ -64,8 +64,11 @@ async def async_oauth_login() -> dict:
                     code = params.get("code", [None])[0]
                     if code:
                         self.send_response(200)
+                        self.send_header("Content-Type", "text/html; charset=utf-8")
                         self.end_headers()
-                        self.wfile.write(b"<h1>Authorization successful! You can close this tab and start playing!</h1>") #TODO; this would be good to have a full HTML page
+                        static_dir = os.path.join(os.path.dirname(__file__), "static")
+                        with open(os.path.join(static_dir, "oauth_success.html"), "rb") as f:
+                            self.wfile.write(f.read())
                         if not code_future.done():
                             code_future.set_result(code)
                         def shutdown_server(server):
@@ -74,8 +77,11 @@ async def async_oauth_login() -> dict:
                         threading.Thread(target=shutdown_server, args=(self.server,), daemon=True).start()
                     else:
                         self.send_response(400)
+                        self.send_header("Content-Type", "text/html; charset=utf-8")
                         self.end_headers()
-                        self.wfile.write(b"<h1>Error: Missing authorization code</h1>")
+                        static_dir = os.path.join(os.path.dirname(__file__), "static")
+                        with open(os.path.join(static_dir, "oauth_error.html"), "rb") as f:
+                            self.wfile.write(f.read())
 
 
         logger.info(f"🔊 Listening for callback on {REDIRECT_URI} ...")
