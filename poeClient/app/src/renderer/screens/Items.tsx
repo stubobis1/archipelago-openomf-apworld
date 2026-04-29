@@ -272,6 +272,24 @@ function HintsSection({ hints }: { hints: APHint[] }) {
 
 export function ItemsScreen() {
   const { items, hints, char } = useStore()
+  const [search, setSearch] = useState('')
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault()
+        searchRef.current?.focus()
+        searchRef.current?.select()
+      }
+      if (e.key === 'Escape' && document.activeElement === searchRef.current) {
+        setSearch('')
+        searchRef.current?.blur()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   useEffect(() => { initGemTooltips() }, [])
 
@@ -288,13 +306,18 @@ export function ItemsScreen() {
   const allocatedPassives = (char?.passives as any)?.hashes?.length ?? 0
   const availablePassives = passiveCount - allocatedPassives
 
+  const searchLower = search.toLowerCase()
+  const filteredItems = searchLower
+    ? items.filter(i => i.name.toLowerCase().includes(searchLower))
+    : items
+
   const classItems = new Set(CLASS_TREE.flatMap(r => [r.base, ...r.asc]))
-  const receivedNames = new Set(items.map(i => i.name))
+  const receivedNames = new Set(filteredItems.map(i => i.name))
   const hasClassItems = CLASS_TREE.some(r => receivedNames.has(r.base) || r.asc.some(a => receivedNames.has(a)))
 
   const grouped: Record<string, Record<string, number>> = {}
   for (const cat of CAT_ORDER) grouped[cat] = {}
-  for (const item of items) {
+  for (const item of filteredItems) {
     if (classItems.has(item.name)) continue
     const cat = categorizeItem(item)
     if (!grouped[cat]) grouped[cat] = {}
@@ -306,6 +329,19 @@ export function ItemsScreen() {
       <div className="page-header">
         <h1>Items</h1>
         <div className="sub">{items.length} received</div>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <input
+            ref={searchRef}
+            className="input mono"
+            style={{ width: 200, fontSize: 12 }}
+            placeholder="Search… (Ctrl+F)"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          {search && (
+            <button className="btn" style={{ padding: '4px 8px', fontSize: 11 }} onClick={() => setSearch('')}>✕</button>
+          )}
+        </div>
       </div>
       <style>{`@keyframes passive-flash { from { opacity: 1 } to { opacity: 0.25 } }`}</style>
 

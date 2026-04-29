@@ -83,6 +83,7 @@ body, html { margin: 0; padding: 0; font-family: var(--sans); color: var(--ink);
 .nav .item:hover:not(.active) { background: var(--bg-3); }
 .nav .item .ico { width: 14px; height: 14px; opacity: .7; flex-shrink: 0; }
 .nav .item .badge { margin-left: auto; font-family: var(--mono); font-size: 10px; background: var(--accent-soft); color: var(--accent); padding: 1px 6px; border-radius: 99px; }
+.nav .item .badge.ok { background: color-mix(in oklch, var(--ok) 15%, transparent); color: var(--ok); }
 
 .sidebar .footer { padding: 14px 18px; border-top: 1px solid var(--rule); font-family: var(--mono); font-size: 10px; color: var(--ink-4); line-height: 1.6; }
 

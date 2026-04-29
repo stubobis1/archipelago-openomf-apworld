@@ -74,21 +74,6 @@ function StatusCard({ onNavigate }: { onNavigate: (screen: string, section?: str
       <SectionLabel>Status</SectionLabel>
       <div style={{ background: 'var(--bg-3)', border: '1px solid var(--rule)', borderRadius: 6, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 9 }}>
         <StatusRow
-          ok={oauthStatus === 'valid'}
-          label={gggLabel}
-          cta={oauthStatus !== 'valid'
-            ? <button className="btn sm" style={{ fontSize: 10, padding: '2px 8px' }} onClick={() => action({ type: 'oauth:start' })}>Connect GGG</button>
-            : undefined}
-        />
-        <StatusRow
-          ok={!!char}
-          warn={!char && !!charName}
-          label={charLabel}
-          cta={!char && (!charName || oauthStatus === 'valid')
-            ? <button className="btn sm" style={{ fontSize: 10, padding: '2px 8px' }} onClick={() => onNavigate('settings', 'character')}>Set character</button>
-            : undefined}
-        />
-        <StatusRow
           ok={clientTxtPathOk && docPathOk}
           label="Paths"
           cta={!(clientTxtPathOk && docPathOk)
@@ -103,6 +88,22 @@ function StatusCard({ onNavigate }: { onNavigate: (screen: string, section?: str
             ? <button className="btn sm" style={{ fontSize: 10, padding: '2px 8px' }} onClick={() => onNavigate('settings', 'filter')}>Set filter</button>
             : undefined}
         />
+        <StatusRow
+          ok={oauthStatus === 'valid'}
+          label={gggLabel}
+          cta={oauthStatus !== 'valid'
+            ? <button className="btn sm" style={{ fontSize: 10, padding: '2px 8px' }} onClick={() => action({ type: 'oauth:start' })}>Connect GGG</button>
+            : undefined}
+        />
+        <StatusRow
+          ok={!!char}
+          warn={!char && !!charName}
+          label={charLabel}
+          cta={!char && (!charName || oauthStatus === 'valid')
+            ? <button className="btn sm" style={{ fontSize: 10, padding: '2px 8px' }} onClick={() => onNavigate('settings', 'character')}>Set character</button>
+            : undefined}
+        />
+        
         <StatusRow
           ok={connected}
           label={apLabel}

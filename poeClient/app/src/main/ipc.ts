@@ -27,16 +27,25 @@ const BACKWARDS_COMPATIBLE_VERSIONS = new Set(poeVersion.backwardsCompatibleVers
 // Highest item index whispered so far — prevents re-whispering on reconnect replay
 let _highWaterIndex = -1
 
-// Batch item whispers — AP sends itemsReceived as a burst; flush on next tick
-let _pendingWhisperNames: string[] = []
+// Batch item whispers — AP fires itemsReceived as a burst of individual events.
+// We collect them for 2 s, then flush as a single whisper sorted by AP index
+// so the in-game message always lists items in receive order regardless of
+// which order the events arrive.
+let _pendingWhispers: { index: number; name: string }[] = []
 let _pendingWhisperTimer: ReturnType<typeof setTimeout> | null = null
 
+/**
+ * Flush pending item whispers to the game chat as a single "@charName You received: …" message.
+ * Items are sorted by AP index before collapsing duplicates so the order is deterministic.
+ * Long messages are split into ≤500-char chunks (the game chat limit).
+ */
 function flushItemWhisper(charName: string): void {
-  if (_pendingWhisperNames.length === 0) return
-  const raw = _pendingWhisperNames.splice(0)
+  if (_pendingWhispers.length === 0) return
+  // Sort by AP index — events arrive in burst but not always in order
+  const raw = _pendingWhispers.splice(0).sort((a, b) => a.index - b.index)
   // Collapse duplicates: ["Foo", "Foo", "Bar"] → ["Foo x2", "Bar"]
   const counts: Record<string, number> = {}
-  for (const n of raw) counts[n] = (counts[n] ?? 0) + 1
+  for (const { name: n } of raw) counts[n] = (counts[n] ?? 0) + 1
   const names = Object.entries(counts).map(([n, c]) => c > 1 ? `${n} x${c}` : n)
   const prefix = `@${charName} `
   const maxBody = 500 - prefix.length
@@ -105,7 +114,8 @@ export function initIpc(): void {
         eligible: state.goal?.eligible ?? false,
         complete: state.goal?.complete ?? false,
       }
-      patch({ connection: 'connected', slotName: ev.slot, goal: goalState })
+      const totalGearUnlocks: number = gameOpts.total_gear_upgrades ?? 0
+      patch({ connection: 'connected', slotName: ev.slot, goal: goalState, totalGearUnlocks })
 
       // Defer one tick so archipelago.js finishes populating room.checkedLocations/missingLocations
       setTimeout(() => {
@@ -187,20 +197,34 @@ export function initIpc(): void {
 
       if (isNew) {
         pushChat({ t: timestamp(), kind: 'item', body: `${item.name} from ${item.from}` })
+
         if (state.whisperUpdates) {
           const ws = settingsService.get(...sc())
+          // whisperedIndices persists across reconnects so we never double-whisper a replayed item.
           const whispered = new Set(ws.whisperedIndices ?? [])
           if (!whispered.has(item.index)) {
             whispered.add(item.index)
             settingsService.set('whisperedIndices', [...whispered], ...sc())
+
             const charName = state.charName ?? state.char?.name
             if (charName) {
-              _pendingWhisperNames.push(item.name)
-              if (_pendingWhisperTimer) clearTimeout(_pendingWhisperTimer)
-              _pendingWhisperTimer = setTimeout(() => {
-                _pendingWhisperTimer = null
-                flushItemWhisper(charName)
-              }, 2000)
+              // Boss defeat items have names like "defeat Sirus" — give them a
+              // dedicated immediate whisper instead of lumping them into the
+              // generic "You received: …" batch message.
+              const bossMatch = item.name.match(/^defeat (.+)$/i)
+              if (bossMatch) {
+                const bossDisplay = bossMatch[1].replace(/\b\w/g, c => c.toUpperCase())
+                queueChatSend(`@${charName} You have defeated ${bossDisplay}!`)
+              } else {
+                // Batch normal items into a single whisper, debounced 2 s to
+                // collapse burst deliveries into one chat message.
+                _pendingWhispers.push({ index: item.index, name: item.name })
+                if (_pendingWhisperTimer) clearTimeout(_pendingWhisperTimer)
+                _pendingWhisperTimer = setTimeout(() => {
+                  _pendingWhisperTimer = null
+                  flushItemWhisper(charName)
+                }, 2000)
+              }
             }
           }
         }

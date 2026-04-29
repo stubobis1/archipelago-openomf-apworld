@@ -215,6 +215,7 @@ class PathOfExileWorld(World):
             "starting_character": Options.option_starting_character_to_class_name(options.starting_character.value),
             "bosses_for_goal": self.bosses_for_goal,
             "deathlink": options.death_link.value,
+            "total_gear_upgrades": self.placed_total_gear_upgrades,
         }
         client_options = {
             "lootFilterSounds": options.loot_filter_sounds.value,

@@ -12,7 +12,7 @@ function receivedIds(): Set<number> {
 
 function receivedOfCategory(cat: string) {
   const ids = receivedIds()
-  return getItems().filter(i => i.category?.includes(cat) && ids.has(i.id))
+  return getItems().filter(i => i.category?.includes(cat) && ids.has(i.id)).sort((a, b) => a.id - b.id)
 }
 
 function gemsOfCategory(cat: string, maxLevel?: number) {
@@ -48,6 +48,13 @@ function gearMessage(filterCat: string): string {
 
   const parts = [...progParts, ...singleParts]
   return parts.length ? parts.join(', ') : 'none'
+}
+
+function bossMessage(): string {
+  const g = state.goal
+  if (!g || g.type !== 10 || !g.bosses?.length) return 'No boss goal active'
+  const parts = g.bosses.map(b => (g.defeated.includes(b) ? `✓${b}` : `✗${b}`))
+  return `Bosses: ${parts.join(' ')}${g.complete ? ' — ALL DONE!' : ''}`
 }
 
 function goalMessage(): string {
@@ -129,7 +136,7 @@ export async function handleChatCommand(who: string, msg: string): Promise<void>
   let resp: string | null = null
 
   if (['!help', '!commands', '!cmds'].includes(cmd)) {
-    resp = '!gear !weapons !armor !links !flasks !gems !main gems !support gems !utility gems !usable gems !ascendancy !passives !deathlink !whisper updates !goal !help'
+    resp = '!gear !weapons !armor !links !flasks !gems !main gems !support gems !utility gems !usable gems !ascendancy !passives !deathlink !whisper updates !goal !boss !help'
   } else if (cmd === '!gear') {
     resp = `Gear: ${gearMessage('Gear')}`
   } else if (cmd === '!weapons') {
@@ -202,6 +209,8 @@ export async function handleChatCommand(who: string, msg: string): Promise<void>
     resp = `Whisper updates ${newVal ? 'enabled' : 'disabled'}`
   } else if (cmd === '!goal') {
     resp = goalMessage()
+  } else if (['!boss', '!bosses'].includes(cmd)) {
+    resp = bossMessage()
   }
 
   if (resp) {

@@ -96,57 +96,6 @@ export function SettingsScreen({ scrollTo }: { scrollTo?: string }) {
       </div>
 
       <div style={{ padding: '28px 28px', maxWidth: 860 }}>
-
-        <Section title="Paths" id="settings-paths">
-          <Row label="Client.txt" note="PoE log file; tailed for zone changes, deaths, and chat commands.">
-            <PathInput
-              label="" value={paths.clientTxt}
-              onChange={v => setPaths(p => ({ ...p, clientTxt: v }))}
-              onBlur={v => save('clientTxtPath')(v)}
-              placeholder="C:\Games\Path of Exile\logs\Client.txt"
-              mode="file" browseTitle="Select Client.txt"
-              browseDefaultPath={paths.clientTxt || undefined}
-            />
-          </Row>
-          <Row label="PoE Documents folder" note="Where __ap.filter will be written.">
-            <PathInput
-              label="" value={paths.docPath}
-              onChange={v => setPaths(p => ({ ...p, docPath: v }))}
-              onBlur={v => save('poeDocPath')(v)}
-              placeholder="C:\Users\you\Documents\My Games\Path of Exile\"
-              mode="folder" browseTitle="Select PoE documents folder"
-              browseDefaultPath={paths.docPath || undefined}
-            />
-          </Row>
-        </Section>
-
-        <Section title="Item Filter" id="settings-filter">
-          <Row label="Base item filter" note="Filter name to chain imports from (optional). The AP filter wraps it.">
-            <FilterPathInput
-              value={paths.baseFilter} docPath={paths.docPath}
-              onChange={v => setPaths(p => ({ ...p, baseFilter: v }))}
-              onBlur={v => save('baseItemFilter')(v)}
-            />
-          </Row>
-          <Row label="Display mode" note="How to display AP items in the loot filter.">
-            <div className="seg" style={{ fontSize: 11.5 }}>
-              {([['Show',0],['Hide Classification',3],['Randomize',2],['Hide',1]] as [string,number][]).map(([lbl,v]) => (
-                <div key={v} className={`opt${filterDisplay===v?' active':''}`} onClick={() => { setFilterDisplay(v); save('filterDisplay')(v) }}>{lbl}</div>
-              ))}
-            </div>
-          </Row>
-          <Row label="Sound mode" note="Alert sounds for AP items.">
-            <div className="seg" style={{ fontSize: 11.5 }}>
-              {([['None',0],['Jingles',2],['Random',3]] as [string,number][]).map(([lbl,v]) => (
-                <div key={v} className={`opt${filterSound===v?' active':''}`} onClick={() => { setFilterSound(v); save('filterSound')(v) }}>{lbl}</div>
-              ))}
-            </div>
-          </Row>
-          <Row label="Regenerate now" note="Force-write the filter immediately.">
-            <button className="btn" onClick={() => action({ type: 'regenerateFilter' })}>Regenerate filter</button>
-          </Row>
-        </Section>
-
         <Section title="GGG Account" id="settings-character">
           <Row label="OAuth status" note="Read-only access to character data.">
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -170,8 +119,15 @@ export function SettingsScreen({ scrollTo }: { scrollTo?: string }) {
         <Section title="Archipelago Connection" id="settings-ap">
           {connected ? (
             <>
+              
+              <Row label="Server" note="Connected server address.">
+                <span className="mono" style={{ fontSize: 12, color: 'var(--ink-2)' }}>{apAddr || '—'}</span>
+              </Row>
+              <Row label="Slot name" note="Connected slot.">
+                <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{apSlot || '—'}</span>
+              </Row>
               <Row label="Connection" note="Current server connection status.">
-                <span className="pill ok"><span className="dot" />connected · {apAddr || '—'}</span>
+                <span className="pill ok"><span className="dot" />connected</span>
               </Row>
               <Row label="Disconnect" note="Drop current server connection.">
                 <button className="btn" onClick={() => action({ type: 'disconnect' })}>Disconnect</button>
@@ -218,13 +174,59 @@ export function SettingsScreen({ scrollTo }: { scrollTo?: string }) {
             </>
           )}
         </Section>
-
+        <Section title="Item Filter" id="settings-filter">
+          <Row label="Base item filter" note="Filter name to chain imports from (optional). The AP filter wraps it.">
+            <FilterPathInput
+              value={paths.baseFilter} docPath={paths.docPath}
+              onChange={v => setPaths(p => ({ ...p, baseFilter: v }))}
+              onBlur={v => save('baseItemFilter')(v)}
+            />
+          </Row>
+          <Row label="Display mode" note="How to display AP items in the loot filter.">
+            <div className="seg" style={{ fontSize: 11.5 }}>
+              {([['Show',0],['Hide Classification',3],['Randomize',2],['Hide',1]] as [string,number][]).map(([lbl,v]) => (
+                <div key={v} className={`opt${filterDisplay===v?' active':''}`} onClick={() => { setFilterDisplay(v); save('filterDisplay')(v) }}>{lbl}</div>
+              ))}
+            </div>
+          </Row>
+          <Row label="Sound mode" note="Alert sounds for AP items.">
+            <div className="seg" style={{ fontSize: 11.5 }}>
+              {([['None',0],['Jingles',2],['Random',3]] as [string,number][]).map(([lbl,v]) => (
+                <div key={v} className={`opt${filterSound===v?' active':''}`} onClick={() => { setFilterSound(v); save('filterSound')(v) }}>{lbl}</div>
+              ))}
+            </div>
+          </Row>
+          <Row label="Regenerate now" note="Force-write the filter immediately.">
+            <button className="btn" onClick={() => action({ type: 'regenerateFilter' })}>Regenerate filter</button>
+          </Row>
+        </Section>
         <Section title="DeathLink">
           <Row label="DeathLink" note="Send your death to the multiworld, and receive deaths from it.">
             <Toggle on={deathlink} onChange={v => action({ type: 'setDeathlink', enabled: v })} />
           </Row>
         </Section>
-
+        <Section title="Paths" id="settings-paths">
+          <Row label="Client.txt" note="PoE log file; tailed for zone changes, deaths, and chat commands.">
+            <PathInput
+              label="" value={paths.clientTxt}
+              onChange={v => setPaths(p => ({ ...p, clientTxt: v }))}
+              onBlur={v => save('clientTxtPath')(v)}
+              placeholder="C:\Games\Path of Exile\logs\Client.txt"
+              mode="file" browseTitle="Select Client.txt"
+              browseDefaultPath={paths.clientTxt || undefined}
+            />
+          </Row>
+          <Row label="PoE Documents folder" note="Where __ap.filter will be written.">
+            <PathInput
+              label="" value={paths.docPath}
+              onChange={v => setPaths(p => ({ ...p, docPath: v }))}
+              onBlur={v => save('poeDocPath')(v)}
+              placeholder="C:\Users\you\Documents\My Games\Path of Exile\"
+              mode="folder" browseTitle="Select PoE documents folder"
+              browseDefaultPath={paths.docPath || undefined}
+            />
+          </Row>
+        </Section>
         <Section title="Game Input">
           <Row label="Bypass focus check" note="Always send commands even if PoE isn't in the foreground.">
             <Toggle on={bypass} onChange={v => { setBypass(v); save('bypassFocusCheck')(v) }} />

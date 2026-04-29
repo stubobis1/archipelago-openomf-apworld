@@ -23,6 +23,7 @@ const INITIAL: AppState = {
   items:           [],
   chat:            [],
   goal:            null,
+  totalGearUnlocks: 0,
   errors:          [],
   deathlink:       false,
   whisperUpdates:  true,

@@ -190,6 +190,7 @@ export interface AppState {
   items:       ReceivedItem[]
   chat:        ChatMessage[]
   goal:        GoalState | null
+  totalGearUnlocks: number
   errors:      ValidationError[]
   deathlink:   boolean
   whisperUpdates: boolean
