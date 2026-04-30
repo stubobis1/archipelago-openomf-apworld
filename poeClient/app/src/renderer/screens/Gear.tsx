@@ -14,7 +14,7 @@ export function GearScreen() {
       <div className="page-header">
         <h1>Equipment</h1>
         <div className="sub">
-          AP unlock tiers · {char ? `${char.name} · ${char.class} lv ${char.level}` : 'no character loaded'}
+          equipment unlocks · {char ? `${char.name} · ${char.class} lv ${char.level}` : 'no character loaded'}
           {errors.length > 0 && <span className="pill err" style={{ marginLeft: 12 }}>{errors.length} issues</span>}
         </div>
       </div>

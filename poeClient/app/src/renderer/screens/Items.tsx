@@ -184,7 +184,7 @@ function HintComboBox({ value, onChange, items: names }: { value: string; onChan
       />
       {open && filtered.length > 0 && (
         <ul ref={listRef} style={{
-          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+          position: 'absolute', bottom: '100%', left: 0, right: 0, zIndex: 100,
           margin: 0, padding: '4px 0', listStyle: 'none',
           background: 'var(--bg-3)', border: '1px solid var(--rule-2)',
           borderRadius: 5, maxHeight: 280, overflowY: 'auto',
@@ -211,11 +211,38 @@ function HintComboBox({ value, onChange, items: names }: { value: string; onChan
   )
 }
 
+function useAllItemNames(receivedItems: ReceivedItem[]): string[] {
+  const [allItems, setAllItems] = useState<{ name: string; count?: number }[]>([])
+
+  useEffect(() => {
+    fetch('ap-assets:///data/Items.json')
+      .then(r => r.json())
+      .then((data: { name: string; count?: number }[]) => setAllItems(data))
+      .catch(() => {})
+  }, [])
+
+  return React.useMemo(() => {
+    const receivedCounts = new Map<string, number>()
+    for (const item of receivedItems) {
+      receivedCounts.set(item.name, (receivedCounts.get(item.name) ?? 0) + 1)
+    }
+
+    return allItems
+      .filter(item => {
+        const got = receivedCounts.get(item.name) ?? 0
+        const max = item.count ?? 1
+        return got < max
+      })
+      .map(item => item.name)
+      .sort()
+  }, [allItems, receivedItems])
+}
+
 function HintsSection({ hints }: { hints: APHint[] }) {
   const action = useStore(s => s.action)
   const { items } = useStore()
   const [hintInput, setHintInput] = useState('')
-  const itemNames = [...new Set(items.map(i => i.name))].sort()
+  const itemNames = useAllItemNames(items)
 
   function sendHint() {
     const v = hintInput.trim()
@@ -391,7 +418,7 @@ export function ItemsScreen() {
         {/* Paper doll — visible below 1650px, hidden at wide breakpoint where it moves to sidebar */}
         <div className="items-paperdoll-bottom">
           <div className="mono" style={{ fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-3)', marginBottom: 14, marginTop: 40 }}>Equipment</div>
-          <PaperDoll items={items} mobile />
+          <PaperDoll items={items} />
         </div>
       </div>
 

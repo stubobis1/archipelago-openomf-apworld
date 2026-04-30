@@ -149,7 +149,7 @@ function FlaskSlot({ slotNum }: { slotNum: number }) {
   )
 }
 
-export function PaperDoll({ items, mobile }: { items: ReceivedItem[]; mobile?: boolean }) {
+export function PaperDoll({ items }: { items: ReceivedItem[] }) {
   const counts = buildCounts(items)
   const anyUnlocked = items.some(i =>
     /^(Progressive|Normal|Magic|Rare|Unique) /.test(i.name) ||
@@ -160,7 +160,7 @@ export function PaperDoll({ items, mobile }: { items: ReceivedItem[]; mobile?: b
 
   return (
     <CountsCtx.Provider value={counts}>
-      <div className={`eq-grid${mobile ? ' eq-grid-mobile' : ''}`}>
+      <div className="eq-grid">
         <EqSlot area="helmet"     title="Helmet"      base="Helmet"     imgFile="normalhelmet"     linkName="Helm"       variant="2col" />
         <MultiSlot area="weapon"  title="Weapon"      subs={WEAPON_SUBS}                           linkName="Weapon" />
         <MultiSlot area="offhand" title="Offhand"     subs={OFFHAND_SUBS}                          linkName="Offhand"   imgFile="normalshield" slotClass="eq-slot-lg" />
