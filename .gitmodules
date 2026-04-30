@@ -1,3 +1,6 @@
 [submodule "Path-of-Exile-Archipelago-Client"]
 	path = Path-of-Exile-Archipelago-Client
 	url = git@github.com:stubobis1/Path-of-Exile-Archipelago-Client.git
+[submodule "pathofexile_ap"]
+	path = pathofexile_ap
+	url = git@github.com:stubobis1/pathofexile_ap.git
