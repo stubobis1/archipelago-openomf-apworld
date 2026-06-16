@@ -22,8 +22,8 @@ def match_location_id(global_idx: int) -> int:
     return BASE_ID + 1000 + global_idx
 
 
-def tournament_win_id(tournament_idx: int) -> int:
-    return BASE_ID + 2000 + tournament_idx
+def tournament_win_id(tournament_idx: int, reward_idx: int = 0) -> int:
+    return BASE_ID + 2000 + tournament_idx * 3 + reward_idx
 
 
 def har_buy_location_id(har_idx: int, stat_idx: int, level: int) -> int:
@@ -46,7 +46,8 @@ def _build_location_table() -> dict[str, int]:
                 idx += 1
 
     for ti, t in enumerate(TOURNAMENTS):
-        table[f"Win {t['name']}"] = tournament_win_id(ti)
+        for ri in range(3):
+            table[f"Win {t['name']} ({ri + 1})"] = tournament_win_id(ti, ri)
 
     for hi, har in enumerate(HAR_NAMES):
         for si, stat in enumerate(HAR_STAT_NAMES):
@@ -66,7 +67,7 @@ LOCATION_GROUPS: dict[str, set[str]] = {
     "Match Checks":      {
         f"{t['name']} - Beat {p}" for t in TOURNAMENTS for p, _, r in t["pilots"] if not r
     },
-    "Tournament Checks": {f"Win {t['name']}" for t in TOURNAMENTS},
+    "Tournament Checks": {f"Win {t['name']} ({ri + 1})" for t in TOURNAMENTS for ri in range(3)},
     "Buy Checks":        {
         f"Buy {har} {stat} Upgrade {lvl}"
         for har in HAR_NAMES for stat in HAR_STAT_NAMES for lvl in range(1, MAX_HAR_LEVELS + 1)

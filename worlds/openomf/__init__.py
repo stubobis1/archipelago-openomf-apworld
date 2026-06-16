@@ -70,6 +70,10 @@ class OMFWorld(World):
             if i != self._starting_har_idx:
                 pool.append(create_item(self, f"{har} Unlock"))
 
+        # 3 Progressive Tournament Access items unlock Katushai, WAR, World in order
+        for _ in range(3):
+            pool.append(create_item(self, "Progressive Tournament Access"))
+
         if include_buy:
             # HAR stat progressives: one item per level per stat per HAR
             for har in HAR_NAMES:

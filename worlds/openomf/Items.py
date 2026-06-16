@@ -9,8 +9,9 @@ BASE_ID = 20970000
 #   20970200 – 20970202  Pilot stat progressives (3 stats)
 #   20970300             Money (Small)
 #   20970301             Money (Large)
-#   20970302             Nothing
-#   20970400 – 20970409  HAR enhancement progressives (one ID per HAR with enhancements)
+#   20970302             Additional HAR Color
+#   20970400 – 20970410  HAR enhancement progressives (one ID per HAR with enhancements)
+#   20970500             Progressive Tournament Access (3 copies unlock Katushai, WAR, World)
 
 
 class OMFItem(Item):
@@ -33,9 +34,10 @@ def har_enhancement_item_id(har_idx: int) -> int:
     return BASE_ID + 400 + har_idx
 
 
-MONEY_SMALL_ID = BASE_ID + 300
-MONEY_LARGE_ID = BASE_ID + 301
-NOTHING_ID     = BASE_ID + 302
+MONEY_SMALL_ID          = BASE_ID + 300
+MONEY_LARGE_ID          = BASE_ID + 301
+HAR_COLOR_ID            = BASE_ID + 302
+TOURNAMENT_ACCESS_ID    = BASE_ID + 500
 
 
 def _build_item_table() -> dict[str, int]:
@@ -50,26 +52,28 @@ def _build_item_table() -> dict[str, int]:
     for hi, har in enumerate(HAR_NAMES):
         if HAR_ENHANCEMENT_COUNTS[hi] > 0:
             table[f"Progressive {har} Enhancement"] = har_enhancement_item_id(hi)
-    table["Money (Small)"] = MONEY_SMALL_ID
-    table["Money (Large)"] = MONEY_LARGE_ID
-    table["Nothing"]       = NOTHING_ID
+    table["Money (Small)"]                  = MONEY_SMALL_ID
+    table["Money (Large)"]                  = MONEY_LARGE_ID
+    table["Additional HAR Color"]           = HAR_COLOR_ID
+    table["Progressive Tournament Access"]  = TOURNAMENT_ACCESS_ID
     return table
 
 
 ITEM_NAME_TO_ID: dict[str, int] = _build_item_table()
 
 ITEM_GROUPS: dict[str, set[str]] = {
-    "HAR Unlocks":      {f"{har} Unlock" for har in HAR_NAMES},
-    "HAR Upgrades":     {f"Progressive {har} {stat}" for har in HAR_NAMES for stat in HAR_STAT_NAMES},
-    "HAR Enhancements": {f"Progressive {har} Enhancement" for har, count in zip(HAR_NAMES, HAR_ENHANCEMENT_COUNTS) if count > 0},
-    "Pilot Upgrades":   {f"Progressive {stat}" for stat in PILOT_STAT_NAMES},
-    "Money":            {"Money (Small)", "Money (Large)"},
+    "HAR Unlocks":        {f"{har} Unlock" for har in HAR_NAMES},
+    "HAR Upgrades":       {f"Progressive {har} {stat}" for har in HAR_NAMES for stat in HAR_STAT_NAMES},
+    "HAR Enhancements":   {f"Progressive {har} Enhancement" for har, count in zip(HAR_NAMES, HAR_ENHANCEMENT_COUNTS) if count > 0},
+    "Pilot Upgrades":     {f"Progressive {stat}" for stat in PILOT_STAT_NAMES},
+    "Money":              {"Money (Small)", "Money (Large)"},
+    "Tournament Access":  {"Progressive Tournament Access"},
 }
 
 
 def _classify(name: str) -> ItemClassification:
-    if "Unlock" in name:
-        return ItemClassification.progression  # gates HAR buy locations
+    if "Unlock" in name or name == "Progressive Tournament Access":
+        return ItemClassification.progression
     if "Progressive" in name:
         return ItemClassification.useful
     return ItemClassification.filler
@@ -80,4 +84,4 @@ def create_item(world, name: str) -> OMFItem:
 
 
 def get_filler_item_name(world) -> str:
-    return world.random.choice(["Money (Small)", "Money (Large)", "Nothing"])
+    return world.random.choice(["Money (Small)", "Money (Large)", "Additional HAR Color"])

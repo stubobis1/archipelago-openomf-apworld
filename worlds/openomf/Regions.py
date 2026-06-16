@@ -9,6 +9,10 @@ from .Locations import (
 if False:
     from . import OMFWorld  # type hint only
 
+# NAO is always accessible; each Progressive Tournament Access unlocks the next tournament
+# in registration-fee order: Katushai (1), WAR (2), World Championship (3).
+_TRN_ACCESS_REQUIRED = [0, 1, 2, 3]  # how many Progressive Tournament Access items each tournament needs
+
 
 def create_regions(world: "OMFWorld") -> None:
     player         = world.player
@@ -21,7 +25,7 @@ def create_regions(world: "OMFWorld") -> None:
     menu = Region("Menu", player, mw)
     mw.regions.append(menu)
 
-    # Tournament regions — all accessible from Menu (money enforces ordering in-game).
+    # Tournament regions — gated by Progressive Tournament Access count.
     match_idx = 0
     for ti, t in enumerate(TOURNAMENTS):
         region = Region(t["name"], player, mw)
@@ -33,12 +37,20 @@ def create_regions(world: "OMFWorld") -> None:
                 region.locations.append(loc)
             match_idx += 1
 
-        win_loc = OMFLocation(player, f"Win {t['name']}",
-                              tournament_win_id(ti), region)
-        region.locations.append(win_loc)
+        for ri in range(3):
+            win_loc = OMFLocation(player, f"Win {t['name']} ({ri + 1})",
+                                  tournament_win_id(ti, ri), region)
+            region.locations.append(win_loc)
 
         mw.regions.append(region)
-        menu.connect(region)
+        required = _TRN_ACCESS_REQUIRED[ti]
+        if required == 0:
+            menu.connect(region)
+        else:
+            menu.connect(
+                region,
+                rule=lambda state, req=required: state.count("Progressive Tournament Access", player) >= req,
+            )
 
     # HAR buy regions — one per HAR, gated by HAR unlock item.
     if include_buy:
@@ -66,7 +78,6 @@ def create_regions(world: "OMFWorld") -> None:
         menu.connect(train_region)
 
     # Victory event — separate event location (address=None) in the goal region.
-    # The game client calls StatusUpdate(GOAL) when done; this event expresses logical completion.
     goal_all = goal_idx == 4
     if goal_all:
         goal_region_name = TOURNAMENTS[-1]["name"]
