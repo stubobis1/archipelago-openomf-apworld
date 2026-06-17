@@ -24,7 +24,7 @@ def create_regions(world: "OMFWorld") -> None:
     mw             = world.multiworld
     har_stat_max   = world.options.har_stat_max.value
     pilot_stat_max = world.options.pilot_stat_max.value
-    include_buy    = bool(world.options.include_buy_locations.value)
+    include_buy    = True
     goal_idx       = world.options.goal_tournament.value
 
     menu = Region("Menu", player, mw)

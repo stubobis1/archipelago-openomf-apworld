@@ -61,7 +61,7 @@ class OMFWorld(World):
     def create_items(self) -> None:
         har_stat_max   = self.options.har_stat_max.value
         pilot_stat_max = self.options.pilot_stat_max.value
-        include_buy    = bool(self.options.include_buy_locations.value)
+        include_buy    = True
 
         pool: list[OMFItem] = []
 
@@ -133,7 +133,7 @@ class OMFWorld(World):
             "starting_har":      self._starting_har_idx,
             "har_stat_max":      self.options.har_stat_max.value,
             "pilot_stat_max":    self.options.pilot_stat_max.value,
-            "include_buy":       bool(self.options.include_buy_locations.value),
+            "include_buy":       True,
             "buy_cost_factor":   self.options.buy_cost_factor.value,
             "money_small_value": self.options.money_small_value.value,
             "money_large_value": self.options.money_large_value.value,

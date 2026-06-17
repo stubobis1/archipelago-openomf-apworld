@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from Options import Choice, Toggle, Range, PerGameCommonOptions
+from Options import Choice, Range, PerGameCommonOptions
 
 
 class GoalTournament(Choice):
@@ -47,14 +47,6 @@ class PilotStatMax(Range):
     default     = 25
 
 
-class IncludeBuyLocations(Toggle):
-    """Include Mechlab purchase slots and Training slots as location checks.
-    When off, only match and tournament checks are generated and HAR/pilot stat
-    upgrades are removed from the item pool."""
-    display_name = "Include Buy Locations"
-    default = 1
-
-
 class BuyCostFactor(Range):
     """Per-level cost multiplier on top of vanilla Mechlab prices (stored as integer,
     divide by 100 for float). 100 = vanilla prices. 200 = each successive upgrade
@@ -89,7 +81,6 @@ class OMFOptions(PerGameCommonOptions):
     starting_har:          StartingHAR
     har_stat_max:          HARStatMax
     pilot_stat_max:        PilotStatMax
-    include_buy_locations: IncludeBuyLocations
     buy_cost_factor:       BuyCostFactor
     money_small_value:     MoneySmallValue
     money_large_value:     MoneyLargeValue
