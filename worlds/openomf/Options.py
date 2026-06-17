@@ -65,6 +65,24 @@ class BuyCostFactor(Range):
     default     = 100
 
 
+class MoneySmallValue(Range):
+    """Base credit value for a Money (Small) item. The game further multiplies this
+    by a per-tournament prize modifier (1×/2×/3×/6× for NAO/Katushai/WAR/World)."""
+    display_name = "Money (Small) Value"
+    range_start = 100
+    range_end   = 50000
+    default     = 3000
+
+
+class MoneyLargeValue(Range):
+    """Base credit value for a Money (Large) item. The game further multiplies this
+    by a per-tournament prize modifier (1×/2×/3×/6× for NAO/Katushai/WAR/World)."""
+    display_name = "Money (Large) Value"
+    range_start = 500
+    range_end   = 100000
+    default     = 15000
+
+
 @dataclass
 class OMFOptions(PerGameCommonOptions):
     goal_tournament:       GoalTournament
@@ -73,3 +91,5 @@ class OMFOptions(PerGameCommonOptions):
     pilot_stat_max:        PilotStatMax
     include_buy_locations: IncludeBuyLocations
     buy_cost_factor:       BuyCostFactor
+    money_small_value:     MoneySmallValue
+    money_large_value:     MoneyLargeValue

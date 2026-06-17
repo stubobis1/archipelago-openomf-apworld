@@ -54,7 +54,7 @@ def _build_item_table() -> dict[str, int]:
             table[f"Progressive {har} Enhancement"] = har_enhancement_item_id(hi)
     table["Money (Small)"]                  = MONEY_SMALL_ID
     table["Money (Large)"]                  = MONEY_LARGE_ID
-    table["Additional HAR Color"]           = HAR_COLOR_ID
+    table["Ability to change HAR color"]    = HAR_COLOR_ID
     table["Progressive Tournament Access"]  = TOURNAMENT_ACCESS_ID
     return table
 
@@ -67,6 +67,7 @@ ITEM_GROUPS: dict[str, set[str]] = {
     "HAR Enhancements":   {f"Progressive {har} Enhancement" for har, count in zip(HAR_NAMES, HAR_ENHANCEMENT_COUNTS) if count > 0},
     "Pilot Upgrades":     {f"Progressive {stat}" for stat in PILOT_STAT_NAMES},
     "Money":              {"Money (Small)", "Money (Large)"},
+    "HAR Color":          {"Ability to change HAR color"},
     "Tournament Access":  {"Progressive Tournament Access"},
 }
 
@@ -84,4 +85,4 @@ def create_item(world, name: str) -> OMFItem:
 
 
 def get_filler_item_name(world) -> str:
-    return world.random.choice(["Money (Small)", "Money (Large)", "Additional HAR Color"])
+    return world.random.choice(["Money (Small)", "Money (Large)"])

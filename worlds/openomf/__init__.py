@@ -74,6 +74,9 @@ class OMFWorld(World):
         for _ in range(3):
             pool.append(create_item(self, "Progressive Tournament Access"))
 
+        # 1 HAR color unlock
+        pool.append(create_item(self, "Ability to change HAR color"))
+
         if include_buy:
             # HAR stat progressives: one item per level per stat per HAR
             for har in HAR_NAMES:
@@ -107,21 +110,22 @@ class OMFWorld(World):
 
     def generate_output(self, output_directory: str) -> None:
         if self._debug:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.debug(f"Generating output for {self.game} in {output_directory}")
+            import logging, os
+            logging.getLogger(__name__).info(f"[OMF] generate_output called, writing puml to {output_directory}")
             from BaseClasses import CollectionState
             local_state = CollectionState(self.multiworld)
             for item in self.multiworld.itempool:
                 if item.player == self.player:
                     local_state.collect(item, prevent_sweep=True)
             local_state.sweep_for_advancements(locations=self.multiworld.get_locations(self.player))
+            puml_path = os.path.join(output_directory, f"OMF-Player{self.player}.puml")
             visualize_regions(
                 self.multiworld.get_region(self.origin_region_name, self.player),
-                f"OMF-Player{self.player}.puml",
+                puml_path,
                 show_entrance_names=True,
                 regions_to_highlight=local_state.reachable_regions[self.player],
             )
+            logging.getLogger(__name__).info(f"[OMF] puml written to {puml_path}")
 
     def fill_slot_data(self) -> Mapping[str, Any]:
         return {
@@ -131,4 +135,6 @@ class OMFWorld(World):
             "pilot_stat_max":    self.options.pilot_stat_max.value,
             "include_buy":       bool(self.options.include_buy_locations.value),
             "buy_cost_factor":   self.options.buy_cost_factor.value,
+            "money_small_value": self.options.money_small_value.value,
+            "money_large_value": self.options.money_large_value.value,
         }

@@ -14,6 +14,11 @@ if False:
 _TRN_ACCESS_REQUIRED = [0, 1, 2, 3]  # how many Progressive Tournament Access items each tournament needs
 
 
+# (tier_start_lvl, next_tier_start_or_None, trn_req, region_label)
+_HAR_STAT_TIERS   = [(1, 3, 0, ""), (3, 5, 1, " Lv3"), (5, 8, 2, " Lv5"), (8, None, 3, " Lv8")]
+_PILOT_STAT_TIERS = [(1, 7, 0, ""), (7, 13, 1, " Lv7"), (13, 19, 2, " Lv13"), (19, None, 3, " Lv19")]
+
+
 def create_regions(world: "OMFWorld") -> None:
     player         = world.player
     mw             = world.multiworld
@@ -52,30 +57,60 @@ def create_regions(world: "OMFWorld") -> None:
                 rule=lambda state, req=required: state.count("Progressive Tournament Access", player) >= req,
             )
 
-    # HAR buy regions — one per HAR, gated by HAR unlock item.
+    # HAR buy regions — tiered sub-regions per HAR gated by HAR unlock + TRN count.
+    # Base region ({har} Mechlab) holds lv1-2; sub-regions branch off it for higher tiers.
     if include_buy:
         for hi, har in enumerate(HAR_NAMES):
-            region = Region(f"{har} Mechlab", player, mw)
-            for si, stat in enumerate(HAR_STAT_NAMES):
-                for lvl in range(1, har_stat_max + 1):
+            base_region = None
+            for (t_start, t_next, trn_req, label) in _HAR_STAT_TIERS:
+                lvl_end = (t_next - 1) if t_next is not None else har_stat_max
+                lvl_end = min(lvl_end, har_stat_max)
+                if t_start > har_stat_max:
+                    break
+                region = Region(f"{har} Mechlab{label}", player, mw)
+                for si, stat in enumerate(HAR_STAT_NAMES):
+                    for lvl in range(t_start, lvl_end + 1):
+                        loc = OMFLocation(
+                            player, f"Buy {har} {stat} Upgrade {lvl}",
+                            har_buy_location_id(hi, si, lvl), region,
+                        )
+                        region.locations.append(loc)
+                mw.regions.append(region)
+                if trn_req == 0:
+                    # Base tier: gate on HAR unlock from Menu
+                    menu.connect(region, rule=lambda state, h=har: state.has(f"{h} Unlock", player))
+                    base_region = region
+                else:
+                    # Higher tiers: branch from base with TRN count rule
+                    base_region.connect(
+                        region,
+                        rule=lambda state, r=trn_req: state.count("Progressive Tournament Access", player) >= r,
+                    )
+
+        # Pilot training — tiered sub-regions gated only by TRN count.
+        pilot_base = None
+        for (t_start, t_next, trn_req, label) in _PILOT_STAT_TIERS:
+            lvl_end = (t_next - 1) if t_next is not None else pilot_stat_max
+            lvl_end = min(lvl_end, pilot_stat_max)
+            if t_start > pilot_stat_max:
+                break
+            region = Region(f"Pilot Training{label}", player, mw)
+            for pi, stat in enumerate(PILOT_STAT_NAMES):
+                for lvl in range(t_start, lvl_end + 1):
                     loc = OMFLocation(
-                        player, f"Buy {har} {stat} Upgrade {lvl}",
-                        har_buy_location_id(hi, si, lvl), region,
+                        player, f"Train {stat} Level {lvl}",
+                        pilot_buy_location_id(pi, lvl), region,
                     )
                     region.locations.append(loc)
             mw.regions.append(region)
-            menu.connect(region, rule=lambda state, h=har: state.has(f"{h} Unlock", player))
-
-        train_region = Region("Pilot Training", player, mw)
-        for pi, stat in enumerate(PILOT_STAT_NAMES):
-            for lvl in range(1, pilot_stat_max + 1):
-                loc = OMFLocation(
-                    player, f"Train {stat} Level {lvl}",
-                    pilot_buy_location_id(pi, lvl), train_region,
+            if trn_req == 0:
+                menu.connect(region)
+                pilot_base = region
+            else:
+                pilot_base.connect(
+                    region,
+                    rule=lambda state, r=trn_req: state.count("Progressive Tournament Access", player) >= r,
                 )
-                train_region.locations.append(loc)
-        mw.regions.append(train_region)
-        menu.connect(train_region)
 
     # Victory event — separate event location (address=None) in the goal region.
     goal_all = goal_idx == 4
