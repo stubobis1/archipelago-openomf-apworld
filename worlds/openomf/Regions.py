@@ -11,7 +11,8 @@ if False:
 
 # NAO is always accessible; each Progressive Tournament Access unlocks the next tournament
 # in registration-fee order: Katushai (1), WAR (2), World Championship (3).
-_TRN_ACCESS_REQUIRED = [0, 1, 2, 3]  # how many Progressive Tournament Access items each tournament needs
+_TRN_ACCESS_REQUIRED  = [0,  1,  2,  3]   # Progressive Tournament Access items required
+_TRN_UPGRADE_REQUIRED = [0, 10, 15, 20]   # total HAR stat upgrades required (any one available HAR)
 
 
 # (tier_start_lvl, next_tier_start_or_None, trn_req, region_label)
@@ -48,19 +49,29 @@ def create_regions(world: "OMFWorld") -> None:
             region.locations.append(win_loc)
 
         mw.regions.append(region)
-        required = _TRN_ACCESS_REQUIRED[ti]
+        required        = _TRN_ACCESS_REQUIRED[ti]
+        upgrade_req     = _TRN_UPGRADE_REQUIRED[ti]
+        available_hars  = world._available_har_indices
         if required == 0:
             menu.connect(region)
         else:
             menu.connect(
                 region,
-                rule=lambda state, req=required: state.count("Progressive Tournament Access", player) >= req,
+                rule=lambda state, req=required, upg=upgrade_req, hars=available_hars: (
+                    state.count("Progressive Tournament Access", player) >= req
+                    and any(
+                        sum(state.count(f"Progressive {HAR_NAMES[hi]} {stat}", player)
+                            for stat in HAR_STAT_NAMES) >= upg
+                        for hi in hars
+                    )
+                ),
             )
 
-    # HAR buy regions — tiered sub-regions per HAR gated by HAR unlock + TRN count.
+    # HAR buy regions — tiered sub-regions per available HAR gated by HAR unlock + TRN count.
     # Base region ({har} Mechlab) holds lv1-2; sub-regions branch off it for higher tiers.
     if include_buy:
-        for hi, har in enumerate(HAR_NAMES):
+        for hi in world._available_har_indices:
+            har = HAR_NAMES[hi]
             base_region = None
             for (t_start, t_next, trn_req, label) in _HAR_STAT_TIERS:
                 lvl_end = (t_next - 1) if t_next is not None else har_stat_max

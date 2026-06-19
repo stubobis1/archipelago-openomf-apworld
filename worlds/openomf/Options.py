@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from Options import Choice, Range, PerGameCommonOptions
+from Options import Choice, Range, Toggle, PerGameCommonOptions
 
 
 class GoalTournament(Choice):
@@ -47,14 +47,22 @@ class PilotStatMax(Range):
     default     = 25
 
 
+class AvailableHARs(Range):
+    """How many of the 11 HARs are included in the multiworld. Chosen randomly at generation,
+    always including the starting HAR. 11 = all HARs (default). Minimum 1."""
+    display_name = "Available HARs"
+    range_start = 1
+    range_end   = 11
+    default     = 2
+
+
 class BuyCostFactor(Range):
-    """Per-level cost multiplier on top of vanilla Mechlab prices (stored as integer,
-    divide by 100 for float). 100 = vanilla prices. 200 = each successive upgrade
-    costs 2× vanilla for that tier. Range 10–1000 (0.1×–10×)."""
+    """cost multiplier of vanilla Mechlab prices (divide by 100 for precentage). 
+    100 = vanilla prices. 200 = 2x prices Range 1–1000 (0.01×–10×)."""
     display_name = "Buy Cost Factor"
-    range_start = 10
+    range_start = 1
     range_end   = 1000
-    default     = 100
+    default     = 10
 
 
 class MoneySmallValue(Range):
@@ -75,12 +83,33 @@ class MoneyLargeValue(Range):
     default     = 15000
 
 
+class ShopHints(Toggle):
+    """When enabled, focusing a shop upgrade button broadcasts a hint to the AP server
+    so all players can see what item is at that location. When disabled, the item name
+    is still shown in-game but no hint is sent to the server."""
+    display_name = "Shop Hints"
+    default = 0
+
+
+class Difficulty(Choice):
+    """AI difficulty for tournament opponents. Matches the four OMF difficulty tiers."""
+    display_name = "Difficulty"
+    option_aluminium = 0
+    option_iron      = 1
+    option_steel     = 2
+    option_heavy     = 3
+    default = 1
+
+
 @dataclass
 class OMFOptions(PerGameCommonOptions):
     goal_tournament:       GoalTournament
     starting_har:          StartingHAR
+    available_hars:        AvailableHARs
     har_stat_max:          HARStatMax
     pilot_stat_max:        PilotStatMax
     buy_cost_factor:       BuyCostFactor
     money_small_value:     MoneySmallValue
     money_large_value:     MoneyLargeValue
+    shop_hints:            ShopHints
+    difficulty:            Difficulty

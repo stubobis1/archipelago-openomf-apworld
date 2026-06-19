@@ -34,10 +34,12 @@ def har_enhancement_item_id(har_idx: int) -> int:
     return BASE_ID + 400 + har_idx
 
 
-MONEY_SMALL_ID          = BASE_ID + 300
-MONEY_LARGE_ID          = BASE_ID + 301
-HAR_COLOR_ID            = BASE_ID + 302
-TOURNAMENT_ACCESS_ID    = BASE_ID + 500
+MONEY_SMALL_ID              = BASE_ID + 300
+MONEY_LARGE_ID              = BASE_ID + 301
+HAR_COLOR_PRIMARY_ID        = BASE_ID + 302
+HAR_COLOR_SECONDARY_ID      = BASE_ID + 303
+HAR_COLOR_TERTIARY_ID       = BASE_ID + 304
+TOURNAMENT_ACCESS_ID        = BASE_ID + 500
 
 
 def _build_item_table() -> dict[str, int]:
@@ -54,7 +56,9 @@ def _build_item_table() -> dict[str, int]:
             table[f"Progressive {har} Enhancement"] = har_enhancement_item_id(hi)
     table["Money (Small)"]                  = MONEY_SMALL_ID
     table["Money (Large)"]                  = MONEY_LARGE_ID
-    table["Ability to change HAR color"]    = HAR_COLOR_ID
+    table["Main Body HAR Color"]            = HAR_COLOR_PRIMARY_ID
+    table["Secondary color for robot"]      = HAR_COLOR_SECONDARY_ID
+    table["Third body color for robot"]     = HAR_COLOR_TERTIARY_ID
     table["Progressive Tournament Access"]  = TOURNAMENT_ACCESS_ID
     return table
 
@@ -67,15 +71,19 @@ ITEM_GROUPS: dict[str, set[str]] = {
     "HAR Enhancements":   {f"Progressive {har} Enhancement" for har, count in zip(HAR_NAMES, HAR_ENHANCEMENT_COUNTS) if count > 0},
     "Pilot Upgrades":     {f"Progressive {stat}" for stat in PILOT_STAT_NAMES},
     "Money":              {"Money (Small)", "Money (Large)"},
-    "HAR Color":          {"Ability to change HAR color"},
+    "HAR Color":          {"Main Body HAR Color", "Secondary color for robot", "Third body color for robot"},
     "Tournament Access":  {"Progressive Tournament Access"},
 }
 
+
+_PROGRESSION_STATS = {"ARM Power", "LEG Power", "ARM Speed", "LEG Speed", "Armor"}
 
 def _classify(name: str) -> ItemClassification:
     if "Unlock" in name or name == "Progressive Tournament Access":
         return ItemClassification.progression
     if "Progressive" in name:
+        if any(name.endswith(stat) for stat in _PROGRESSION_STATS):
+            return ItemClassification.progression
         return ItemClassification.useful
     return ItemClassification.filler
 
