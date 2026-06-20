@@ -34,7 +34,7 @@ class StartingHAR(Choice):
 class HARStatMax(Range):
     """Maximum upgrade level for each HAR stat. Vanilla = 9."""
     display_name = "HAR Stat Max"
-    range_start = 1
+    range_start = 4
     range_end   = 20
     default     = 9
 

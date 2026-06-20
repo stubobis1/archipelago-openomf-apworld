@@ -76,7 +76,7 @@ ITEM_GROUPS: dict[str, set[str]] = {
 }
 
 
-_PROGRESSION_STATS = {"ARM Power", "LEG Power", "ARM Speed", "LEG Speed", "Armor"}
+_PROGRESSION_STATS = {"ARM Power", "LEG Power", "ARM Speed", "LEG Speed", "Armor", "Stun Resist"}
 
 def _classify(name: str) -> ItemClassification:
     if "Unlock" in name or name == "Progressive Tournament Access":
