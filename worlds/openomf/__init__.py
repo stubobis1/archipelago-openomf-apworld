@@ -43,11 +43,25 @@ class OMFWorld(World):
     item_name_groups    = ITEM_GROUPS
     location_name_groups = LOCATION_GROUPS
 
-    _starting_har_idx: int  # set in generate_early; use this everywhere, never call _resolve again
+    _starting_har_idx: int        # set in generate_early
+    _available_har_indices: list  # set in generate_early; sorted indices into HAR_NAMES
 
     def generate_early(self) -> None:
-        idx = self.options.starting_har.value
-        self._starting_har_idx = self.random.randint(0, 10) if idx == 11 else idx
+        idx             = self.options.starting_har.value
+        available_count = self.options.available_hars.value
+
+        all_indices = list(range(len(HAR_NAMES)))
+
+        if available_count >= len(HAR_NAMES):
+            self._available_har_indices = all_indices
+            starting = self.random.randint(0, len(HAR_NAMES) - 1) if idx == 11 else idx
+        else:
+            starting = self.random.randint(0, len(HAR_NAMES) - 1) if idx == 11 else idx
+            others   = [i for i in all_indices if i != starting]
+            self.random.shuffle(others)
+            self._available_har_indices = sorted([starting] + others[: available_count - 1])
+
+        self._starting_har_idx = starting
         # Starting HAR is handed to the player at connect — no location needed.
         # Precollect the unlock so HAR-gated buy locations are accessible from the start.
         self.multiworld.push_precollected(create_item(self, f"{HAR_NAMES[self._starting_har_idx]} Unlock"))
@@ -61,25 +75,28 @@ class OMFWorld(World):
     def create_items(self) -> None:
         har_stat_max   = self.options.har_stat_max.value
         pilot_stat_max = self.options.pilot_stat_max.value
-        include_buy    = bool(self.options.include_buy_locations.value)
+        include_buy    = True
 
         pool: list[OMFItem] = []
 
-        # HAR unlocks — 10 items (starting HAR is precollected in generate_early, not pooled)
-        for i, har in enumerate(HAR_NAMES):
+        # HAR unlocks — one per available HAR except starting (precollected in generate_early)
+        for i in self._available_har_indices:
             if i != self._starting_har_idx:
-                pool.append(create_item(self, f"{har} Unlock"))
+                pool.append(create_item(self, f"{HAR_NAMES[i]} Unlock"))
 
         # 3 Progressive Tournament Access items unlock Katushai, WAR, World in order
         for _ in range(3):
             pool.append(create_item(self, "Progressive Tournament Access"))
 
-        # 1 HAR color unlock
-        pool.append(create_item(self, "Ability to change HAR color"))
+        # 3 HAR color unlocks (primary, secondary, tertiary)
+        pool.append(create_item(self, "Main Body HAR Color"))
+        pool.append(create_item(self, "Secondary color for robot"))
+        pool.append(create_item(self, "Third body color for robot"))
 
         if include_buy:
-            # HAR stat progressives: one item per level per stat per HAR
-            for har in HAR_NAMES:
+            # HAR stat progressives: one item per level per stat per available HAR
+            for i in self._available_har_indices:
+                har = HAR_NAMES[i]
                 for stat in HAR_STAT_NAMES:
                     for _ in range(har_stat_max):
                         pool.append(create_item(self, f"Progressive {har} {stat}"))
@@ -87,10 +104,10 @@ class OMFWorld(World):
             for stat in PILOT_STAT_NAMES:
                 for _ in range(pilot_stat_max):
                     pool.append(create_item(self, f"Progressive {stat}"))
-            # HAR enhancement progressives: one item per enhancement level per HAR
-            for har, count in zip(HAR_NAMES, HAR_ENHANCEMENT_COUNTS):
-                for _ in range(count):
-                    pool.append(create_item(self, f"Progressive {har} Enhancement"))
+            # HAR enhancement progressives: one item per enhancement level per available HAR
+            for i in self._available_har_indices:
+                for _ in range(HAR_ENHANCEMENT_COUNTS[i]):
+                    pool.append(create_item(self, f"Progressive {HAR_NAMES[i]} Enhancement"))
 
         # Filler to fill remaining locations
         total_locations = len(self.multiworld.get_unfilled_locations(self.player))
@@ -111,14 +128,15 @@ class OMFWorld(World):
     def generate_output(self, output_directory: str) -> None:
         if self._debug:
             import logging, os
-            logging.getLogger(__name__).info(f"[OMF] generate_output called, writing puml to {output_directory}")
+            puml_dir = os.environ.get("OMF_PUML_DIR", output_directory)
+            logging.getLogger(__name__).info(f"[OMF] generate_output called, writing puml to {puml_dir}")
             from BaseClasses import CollectionState
             local_state = CollectionState(self.multiworld)
             for item in self.multiworld.itempool:
                 if item.player == self.player:
                     local_state.collect(item, prevent_sweep=True)
             local_state.sweep_for_advancements(locations=self.multiworld.get_locations(self.player))
-            puml_path = os.path.join(output_directory, f"OMF-Player{self.player}.puml")
+            puml_path = os.path.join(puml_dir, f"OMF-Player{self.player}.puml")
             visualize_regions(
                 self.multiworld.get_region(self.origin_region_name, self.player),
                 puml_path,
@@ -131,10 +149,13 @@ class OMFWorld(World):
         return {
             "goal_tournament":   self.options.goal_tournament.value,
             "starting_har":      self._starting_har_idx,
+            "available_hars":    self._available_har_indices,
             "har_stat_max":      self.options.har_stat_max.value,
             "pilot_stat_max":    self.options.pilot_stat_max.value,
-            "include_buy":       bool(self.options.include_buy_locations.value),
+            "include_buy":       True,
             "buy_cost_factor":   self.options.buy_cost_factor.value,
             "money_small_value": self.options.money_small_value.value,
             "money_large_value": self.options.money_large_value.value,
+            "shop_hints":        bool(self.options.shop_hints.value),
+            "difficulty":        self.options.difficulty.value,
         }
