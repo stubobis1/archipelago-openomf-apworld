@@ -1,6 +1,8 @@
 {
 	"game": "One Must Fall: 2097",
 	"minimum_ap_version": "0.6.7",
-	"world_version": "0.0.01",
-	"authors": ["stubob"]
+	"world_version": "0.0.02",
+	"authors": [
+		"stubob"
+	]
 }
