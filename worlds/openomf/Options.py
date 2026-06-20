@@ -53,7 +53,7 @@ class AvailableHARs(Range):
     display_name = "Available HARs"
     range_start = 1
     range_end   = 11
-    default     = 2
+    default     = 11
 
 
 class BuyCostFactor(Range):

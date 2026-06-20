@@ -123,7 +123,7 @@ class OMFWorld(World):
         return get_filler_item_name(self)
 
     # TODO: set _debug = False before committing / submitting to AP repo
-    _debug = True
+    _debug = False
 
     def generate_output(self, output_directory: str) -> None:
         if self._debug:
